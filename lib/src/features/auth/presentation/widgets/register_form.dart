@@ -1,12 +1,18 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:pesca_game/src/features/auth/data/repositories/auth_repository.dart';
-import 'package:pesca_game/src/features/main_menu/presentation/screens/main_menu_screen.dart';
+import 'package:pesca_game/src/features/game_menu/presentation/screens/game_menu_screen.dart';
 import 'package:pesca_game/src/shared/widgets/custom_button.dart';
 
 class RegisterForm extends StatefulWidget {
   final VoidCallback onLoginPressed;
+  final AudioPlayer audioPlayer;
 
-  const RegisterForm({super.key, required this.onLoginPressed});
+  const RegisterForm({
+    super.key,
+    required this.onLoginPressed,
+    required this.audioPlayer,
+  });
 
   @override
   State<RegisterForm> createState() => _RegisterFormState();
@@ -25,8 +31,9 @@ class _RegisterFormState extends State<RegisterForm> {
         email: _emailController.text,
         password: _passwordController.text,
       );
+      widget.audioPlayer.stop();
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainMenuScreen()),
+        MaterialPageRoute(builder: (context) => const GameMenuScreen()),
       );
     } catch (e) {
       final message = e.toString().contains('User already exists')

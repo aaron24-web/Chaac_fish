@@ -1,12 +1,18 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:pesca_game/src/features/auth/data/repositories/auth_repository.dart';
-import 'package:pesca_game/src/features/main_menu/presentation/screens/main_menu_screen.dart';
+import 'package:pesca_game/src/features/game_menu/presentation/screens/game_menu_screen.dart';
 import 'package:pesca_game/src/shared/widgets/custom_button.dart';
 
 class LoginForm extends StatefulWidget {
   final VoidCallback onRegisterPressed;
+  final AudioPlayer audioPlayer;
 
-  const LoginForm({super.key, required this.onRegisterPressed});
+  const LoginForm({
+    super.key,
+    required this.onRegisterPressed,
+    required this.audioPlayer,
+  });
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -23,8 +29,9 @@ class _LoginFormState extends State<LoginForm> {
         username: _usernameController.text,
         password: _passwordController.text,
       );
+      widget.audioPlayer.stop();
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainMenuScreen()),
+        MaterialPageRoute(builder: (context) => const GameMenuScreen()),
       );
     } catch (e) {
       final message = e.toString().contains('User not found')

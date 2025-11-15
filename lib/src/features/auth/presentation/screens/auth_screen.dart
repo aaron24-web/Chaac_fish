@@ -66,9 +66,11 @@ class _AuthScreenState extends State<AuthScreen> {
             controller: _pageController,
             children: [
               LoginForm(
+                audioPlayer: _audioPlayer,
                 onRegisterPressed: () => _navigateToPage(1),
               ),
               RegisterForm(
+                audioPlayer: _audioPlayer,
                 onLoginPressed: () => _navigateToPage(0),
               ),
             ],
