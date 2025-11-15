@@ -3,6 +3,7 @@ import 'package:video_player/video_player.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:pesca_game/src/features/auth/presentation/screens/auth_screen.dart';
 import 'package:pesca_game/src/features/game_mode/presentation/screens/game_mode_placeholder_screen.dart';
+import 'package:pesca_game/src/features/story_mode/presentation/screens/story_menu_screen.dart';
 import 'package:pesca_game/src/shared/widgets/custom_button.dart';
 
 class GameMenuScreen extends StatefulWidget {
@@ -44,6 +45,14 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
     );
   }
 
+  void _navigateToStoryMode() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => StoryMenuScreen(audioPlayer: _audioPlayer),
+      ),
+    );
+  }
+
   void _navigateToGameMode(String mode) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -73,7 +82,7 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CustomButton(
-                  onPressed: () => _navigateToGameMode('Modo Historia'),
+                  onPressed: _navigateToStoryMode,
                   text: 'Modo Historia',
                 ),
                 const SizedBox(height: 24),
