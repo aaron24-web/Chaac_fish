@@ -85,12 +85,13 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                             onTap: isLocked
                                 ? null
                                 : () {
+                                    widget.audioPlayer.pause();
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             GameScreen(level: level),
                                       ),
-                                    );
+                                    ).then((_) => widget.audioPlayer.resume());
                                   },
                           );
                         }),

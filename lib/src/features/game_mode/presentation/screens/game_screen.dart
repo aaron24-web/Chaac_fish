@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:pesca_game/src/game/models/fish_model.dart';
 import 'package:pesca_game/src/game/widgets/fish_widget.dart';
@@ -21,6 +22,8 @@ class _GameScreenState extends State<GameScreen>
   late AnimationController _gameLoop;
   final List<Fish> _fishes = [];
   final Random _random = Random();
+  late AudioPlayer _sfxPlayer;
+  late AudioPlayer _backgroundMusicPlayer;
 
   // Hardcoded list of available fish. Later, this can be fetched from the DB.
   final List<Map<String, dynamic>> _availableFishTypes = [
@@ -35,6 +38,10 @@ class _GameScreenState extends State<GameScreen>
   @override
   void initState() {
     super.initState();
+    _sfxPlayer = AudioPlayer();
+    _backgroundMusicPlayer = AudioPlayer();
+    _backgroundMusicPlayer.setReleaseMode(ReleaseMode.loop);
+
     _videoController = VideoPlayerController.asset('assets/videos/utm_fondo.mp4')
       ..initialize().then((_) {
         _videoController.play();
@@ -42,6 +49,8 @@ class _GameScreenState extends State<GameScreen>
         _videoController.setLooping(true);
         setState(() {});
       });
+
+    _backgroundMusicPlayer.play(AssetSource('audio/music/nivel1_sound.mp3'));
 
     _gameLoop = AnimationController(
       vsync: this,
@@ -61,6 +70,8 @@ class _GameScreenState extends State<GameScreen>
     _videoController.dispose();
     _gameLoop.removeListener(_updateGame);
     _gameLoop.dispose();
+    _sfxPlayer.dispose();
+    _backgroundMusicPlayer.dispose();
     super.dispose();
   }
 
@@ -105,8 +116,8 @@ class _GameScreenState extends State<GameScreen>
 
     final bool goesRight = _random.nextBool();
     final double verticalPosition =
-        _random.nextDouble() * (screenSize.height - 200) +
-            100; // Avoid spawning too high or too low
+        _random.nextDouble() * (screenSize.height / 3) +
+            (screenSize.height * 2 / 3); // Spawn in the lower 1/3 of the screen
     final double horizontalPosition = goesRight ? -80 : screenSize.width;
     final double speed = _random.nextDouble() * 2 + 1; // Speed between 1.0 and 3.0
 
@@ -122,6 +133,55 @@ class _GameScreenState extends State<GameScreen>
 
     setState(() {
       _fishes.add(newFish);
+    });
+  }
+
+  void _onBackPressed() {
+    _gameLoop.stop();
+    _videoController.pause();
+    _backgroundMusicPlayer.pause();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('¿Estás seguro de salir?'),
+          content: const Text('Perderás todo tu progreso.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('No'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _gameLoop.repeat();
+                _videoController.play();
+                _backgroundMusicPlayer.resume();
+              },
+            ),
+            TextButton(
+              child: const Text('Sí'),
+              onPressed: () {
+                _backgroundMusicPlayer.stop();
+                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop(); // Go back to the previous screen
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _onFishTapped(Fish fish) {
+    if (fish.imageName == 'cabello_special') {
+      _backgroundMusicPlayer.setVolume(0.2);
+      _sfxPlayer.play(AssetSource('audio/sfx/cabello.mp3'));
+      _sfxPlayer.onPlayerComplete.first.then((_) {
+        _backgroundMusicPlayer.setVolume(1.0);
+      });
+    }
+    setState(() {
+      _fishes.remove(fish);
     });
   }
 
@@ -159,7 +219,12 @@ class _GameScreenState extends State<GameScreen>
           ),
 
           // Fish Widgets
-          ..._fishes.map((fish) => FishWidget(fish: fish)).toList(),
+          ..._fishes
+              .map((fish) => FishWidget(
+                    fish: fish,
+                    onTapped: _onFishTapped,
+                  ))
+              .toList(),
 
           // UI on top
           SafeArea(
@@ -170,9 +235,7 @@ class _GameScreenState extends State<GameScreen>
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
+                      onPressed: _onBackPressed,
                     ),
                   ],
                 ),
