@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:pesca_game/src/features/auth/presentation/screens/auth_screen.dart';
-import 'package:pesca_game/src/features/game_mode/presentation/screens/game_mode_placeholder_screen.dart';
+import 'package:pesca_game/src/features/multiplayer/presentation/screens/multiplayer_menu_screen.dart';
 import 'package:pesca_game/src/features/story_mode/presentation/screens/story_menu_screen.dart';
 import 'package:pesca_game/src/shared/widgets/custom_button.dart';
 
@@ -53,10 +53,10 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
     );
   }
 
-  void _navigateToGameMode(String mode) {
+  void _navigateToMultiplayerMode() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => GameModePlaceholderScreen(mode: mode),
+        builder: (context) => const MultiplayerMenuScreen(),
       ),
     );
   }
@@ -87,7 +87,7 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
                 ),
                 const SizedBox(height: 24),
                 CustomButton(
-                  onPressed: () => _navigateToGameMode('Modo Multijugador'),
+                  onPressed: _navigateToMultiplayerMode,
                   text: 'Modo Multijugador',
                 ),
                 const SizedBox(height: 48),
