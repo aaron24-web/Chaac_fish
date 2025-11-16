@@ -1,21 +1,19 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:pesca_game/src/features/game_mode/presentation/screens/game_screen.dart';
 import 'package:pesca_game/src/features/shop/presentation/screens/shop_placeholder_screen.dart';
 import 'package:video_player/video_player.dart';
 
 class StoryMenuScreen extends StatefulWidget {
   final AudioPlayer audioPlayer;
   const StoryMenuScreen({super.key, required this.audioPlayer});
-
   @override
   State<StoryMenuScreen> createState() => _StoryMenuScreenState();
 }
-
 class _StoryMenuScreenState extends State<StoryMenuScreen> {
   late VideoPlayerController _videoController;
   // Hardcoded for now, will be fetched from Supabase later
   final int unlockedLevel = 1;
-
   @override
   void initState() {
     super.initState();
@@ -28,13 +26,11 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
             setState(() {});
           });
   }
-
   @override
   void dispose() {
     _videoController.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,7 +85,12 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                             onTap: isLocked
                                 ? null
                                 : () {
-                                    // Navigate to the game screen for this level
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            GameScreen(level: level),
+                                      ),
+                                    );
                                   },
                           );
                         }),
@@ -120,32 +121,66 @@ class LevelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The image path is constructed dynamically based on the level.
+    // e.g., assets/images/ui/boton_nivel1.png for level 1.
+    final imagePath = 'assets/images/ui/boton_nivel$level.png';
+
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        color: Colors.white.withOpacity(0.8),
+      child: Container(
+        width: 150,
+        height: 200,
         margin: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: 150,
-          height: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          image: DecorationImage(
+            image: AssetImage(imagePath),
+            fit: BoxFit.cover,
+            // Handling image loading errors by showing a placeholder
+            onError: (exception, stackTrace) {
+              // Log the error or show a more user-friendly message
+              debugPrint('Error loading image: $exception');
+            },
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
           child: Stack(
             alignment: Alignment.center,
             children: [
+              // Display the level number with a shadow for better readability
               Text(
-                'Nivel $level',
-                style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black),
+                '$level',
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 10.0,
+                      color: Colors.black.withOpacity(0.5),
+                      offset: const Offset(2.0, 2.0),
+                    ),
+                  ],
+                ),
               ),
+              // If the level is locked, show a lock icon with a dark overlay
               if (isLocked)
                 Container(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withOpacity(0.6),
                   child: const Center(
                     child: Icon(
                       Icons.lock,
                       color: Colors.white,
-                      size: 50,
+                      size: 60,
                     ),
                   ),
                 ),
