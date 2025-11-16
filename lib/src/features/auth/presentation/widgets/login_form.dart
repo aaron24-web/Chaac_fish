@@ -48,44 +48,46 @@ class _LoginFormState extends State<LoginForm> {
     return Center(
       child: SizedBox(
         width: 400,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de usuario',
-                  filled: true,
-                  fillColor: Colors.white70,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de usuario',
+                    filled: true,
+                    fillColor: Colors.white70,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña (6 dígitos)',
-                  filled: true,
-                  fillColor: Colors.white70,
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Contraseña (6 dígitos)',
+                    filled: true,
+                    fillColor: Colors.white70,
+                  ),
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  obscureText: true,
                 ),
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                obscureText: true,
-              ),
-              const SizedBox(height: 24),
-              CustomButton(
-                onPressed: _login,
-                text: 'Iniciar Sesión',
-              ),
-              TextButton(
-                onPressed: widget.onRegisterPressed,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
+                const SizedBox(height: 24),
+                CustomButton(
+                  onPressed: _login,
+                  text: 'Iniciar Sesión',
                 ),
-                child: const Text('¿No tienes cuenta? Regístrate'),
-              ),
-            ],
+                TextButton(
+                  onPressed: widget.onRegisterPressed,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('¿No tienes cuenta? Regístrate'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

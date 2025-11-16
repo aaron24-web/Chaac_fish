@@ -50,52 +50,54 @@ class _RegisterFormState extends State<RegisterForm> {
     return Center(
       child: SizedBox(
         width: 400,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de usuario',
-                  filled: true,
-                  fillColor: Colors.white70,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de usuario',
+                    filled: true,
+                    fillColor: Colors.white70,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Correo electrónico',
-                  filled: true,
-                  fillColor: Colors.white70,
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Correo electrónico',
+                    filled: true,
+                    fillColor: Colors.white70,
+                  ),
+                  keyboardType: TextInputType.emailAddress,
                 ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  filled: true,
-                  fillColor: Colors.white70,
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Contraseña',
+                    filled: true,
+                    fillColor: Colors.white70,
+                  ),
+                  obscureText: true,
                 ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 24),
-              CustomButton(
-                onPressed: _register,
-                text: 'Registrarse',
-              ),
-              TextButton(
-                onPressed: widget.onLoginPressed,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
+                const SizedBox(height: 24),
+                CustomButton(
+                  onPressed: _register,
+                  text: 'Registrarse',
                 ),
-                child: const Text('¿Ya tienes cuenta? Inicia Sesión'),
-              ),
-            ],
+                TextButton(
+                  onPressed: widget.onLoginPressed,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('¿Ya tienes cuenta? Inicia Sesión'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -62,18 +62,27 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
             ),
-          PageView(
-            controller: _pageController,
-            children: [
-              LoginForm(
-                audioPlayer: _audioPlayer,
-                onRegisterPressed: () => _navigateToPage(1),
-              ),
-              RegisterForm(
-                audioPlayer: _audioPlayer,
-                onLoginPressed: () => _navigateToPage(0),
-              ),
-            ],
+          SafeArea(
+            child: Column(
+              children: [
+                Image.asset('assets/images/ui/logo.gif', height: 150),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    children: [
+                      LoginForm(
+                        audioPlayer: _audioPlayer,
+                        onRegisterPressed: () => _navigateToPage(1),
+                      ),
+                      RegisterForm(
+                        audioPlayer: _audioPlayer,
+                        onLoginPressed: () => _navigateToPage(0),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

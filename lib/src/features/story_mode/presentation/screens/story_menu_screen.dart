@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:pesca_game/src/features/shop/presentation/screens/shop_placeholder_screen.dart';
+import 'package:video_player/video_player.dart';
 
 class StoryMenuScreen extends StatefulWidget {
   final AudioPlayer audioPlayer;
@@ -11,60 +12,95 @@ class StoryMenuScreen extends StatefulWidget {
 }
 
 class _StoryMenuScreenState extends State<StoryMenuScreen> {
+  late VideoPlayerController _videoController;
   // Hardcoded for now, will be fetched from Supabase later
   final int unlockedLevel = 1;
 
   @override
+  void initState() {
+    super.initState();
+    _videoController =
+        VideoPlayerController.asset('assets/videos/fondo_patria.mp4')
+          ..initialize().then((_) {
+            _videoController.play();
+            _videoController.setVolume(0);
+            _videoController.setLooping(true);
+            setState(() {});
+          });
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.store),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const ShopPlaceholderScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: List.generate(3, (index) {
-                      final level = index + 1;
-                      final isLocked = level > unlockedLevel;
-                      return LevelCard(
-                        level: level,
-                        isLocked: isLocked,
-                        onTap: isLocked
-                            ? null
-                            : () {
-                                // Navigate to the game screen for this level
-                              },
-                      );
-                    }),
-                  ),
+      body: Stack(
+        children: [
+          if (_videoController.value.isInitialized)
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _videoController.value.size.width,
+                  height: _videoController.value.size.height,
+                  child: VideoPlayer(_videoController),
                 ),
               ),
             ),
-          ],
-        ),
+          SafeArea(
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.store, color: Colors.white),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ShopPlaceholderScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(3, (index) {
+                          final level = index + 1;
+                          final isLocked = level > unlockedLevel;
+                          return LevelCard(
+                            level: level,
+                            isLocked: isLocked,
+                            onTap: isLocked
+                                ? null
+                                : () {
+                                    // Navigate to the game screen for this level
+                                  },
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -87,6 +123,7 @@ class LevelCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
+        color: Colors.white.withOpacity(0.8),
         margin: const EdgeInsets.all(16),
         child: SizedBox(
           width: 150,
@@ -96,7 +133,10 @@ class LevelCard extends StatelessWidget {
             children: [
               Text(
                 'Nivel $level',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black),
               ),
               if (isLocked)
                 Container(
