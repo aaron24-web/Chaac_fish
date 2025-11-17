@@ -102,35 +102,90 @@ class _ShopItemCardState extends State<ShopItemCard> {
   }
 
   void _handlePurchase() {
-    if (widget.equippedRod != null && widget.equippedRod!.id != widget.item.id) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('¿Estás seguro?'),
-          content: const Text('Tu anterior item se perderá.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Compra incompleta')),
-                );
-              },
-              child: const Text('No'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                widget.onRodEquipped(widget.item);
-              },
-              child: const Text('Sí'),
-            ),
+    // Prevent buying the same equipped rod again
+    if (widget.equippedRod?.id == widget.item.id) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ya tienes esta caña equipada.')),
+      );
+      return;
+    }
+
+    final bool isReplacement = widget.equippedRod != null;
+
+    if (isReplacement) {
+      // Show replacement warning first
+      _showReplacementWarning().then((confirmed) {
+        if (confirmed == true) {
+          // If confirmed, show purchase details
+          _showPurchaseConfirmation();
+        }
+      });
+    } else {
+      // Not a replacement, just show purchase confirmation
+      _showPurchaseConfirmation();
+    }
+  }
+
+  // Shows the replacement warning dialog
+  Future<bool?> _showReplacementWarning() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Comprar otra caña?'),
+        content: const Text('¿Estás seguro de comprar otra caña? Esto hará que tu caña anterior desaparezca.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), // Not confirmed
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true), // Confirmed
+            child: const Text('Sí'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Shows the purchase confirmation dialog
+  void _showPurchaseConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Detalles del pedido'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Item: ${widget.item.name}'),
+            Text('Precio: \$${widget.item.price.toStringAsFixed(2)}'),
+            const SizedBox(height: 16),
+            const Text('¿Estás seguro de proceder con el pago?'),
           ],
         ),
-      );
-    } else {
-      widget.onRodEquipped(widget.item);
-    }
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Compra cancelada.')),
+              );
+            },
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              widget.onRodEquipped(widget.item);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('¡Compra exitosa!')),
+              );
+            },
+            child: const Text('Sí'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -327,6 +327,7 @@ class _GameScreenState extends State<GameScreen>
           // Fish Widgets
           ..._fishes
               .map((fish) => FishWidget(
+                    key: ValueKey(fish.id),
                     fish: fish,
                     onTapped: _onFishTapped,
                   ))
