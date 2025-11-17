@@ -22,11 +22,10 @@ class _RegisterFormState extends State<RegisterForm> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authRepository = AuthRepository();
 
   Future<void> _register() async {
     try {
-      await _authRepository.signUp(
+      await AuthRepository.signUp(
         username: _usernameController.text,
         email: _emailController.text,
         password: _passwordController.text,

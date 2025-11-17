@@ -278,7 +278,8 @@ class _GameScreenState extends State<GameScreen>
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
-                Navigator.of(context).pop(true); // Go back with a win result
+                Navigator.of(context)
+                    .pop(_currentScore); // Go back with a win result
               },
             ),
           ],

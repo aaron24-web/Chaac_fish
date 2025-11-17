@@ -21,11 +21,10 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authRepository = AuthRepository();
 
   Future<void> _login() async {
     try {
-      await _authRepository.signIn(
+      await AuthRepository.signIn(
         username: _usernameController.text,
         password: _passwordController.text,
       );

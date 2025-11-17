@@ -1,9 +1,12 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:pesca_game/src/features/auth/data/repositories/auth_repository.dart';
 import 'package:pesca_game/src/features/game_mode/presentation/screens/game_screen.dart';
 import 'package:pesca_game/src/features/shop/domain/models/shop_item_model.dart';
 import 'package:pesca_game/src/features/shop/presentation/screens/shop_placeholder_screen.dart';
+import 'package:pesca_game/src/features/story_mode/data/repositories/story_repository.dart';
 import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StoryMenuScreen extends StatefulWidget {
   final AudioPlayer audioPlayer;
@@ -11,14 +14,18 @@ class StoryMenuScreen extends StatefulWidget {
   @override
   State<StoryMenuScreen> createState() => _StoryMenuScreenState();
 }
+
 class _StoryMenuScreenState extends State<StoryMenuScreen> {
   late VideoPlayerController _videoController;
-  int _unlockedLevel = 1;
+  late final StoryRepository _storyRepository;
+  late Future<int> _unlockedLevelFuture;
   ShopItem? _equippedRod;
+  int? get _userId => AuthRepository.currentUser?['id'];
 
   @override
   void initState() {
     super.initState();
+    _storyRepository = StoryRepository(Supabase.instance.client);
     _videoController =
         VideoPlayerController.asset('assets/videos/fondo_patria.mp4')
           ..initialize().then((_) {
@@ -27,7 +34,22 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
             _videoController.setLooping(true);
             setState(() {});
           });
+    _loadUnlockedLevel();
   }
+
+  void _loadUnlockedLevel() {
+    if (_userId != null) {
+      setState(() {
+        _unlockedLevelFuture = _storyRepository.getUnlockedLevel(_userId!);
+      });
+    } else {
+      // Handle the case where the user is not logged in
+      setState(() {
+        _unlockedLevelFuture = Future.value(1);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _videoController.dispose();
@@ -90,41 +112,73 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                   ],
                 ),
                 Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: List.generate(3, (index) {
-                          final level = index + 1;
-                          final isLocked = level > _unlockedLevel;
-                          return LevelCard(
-                            level: level,
-                            isLocked: isLocked,
-                            onTap: isLocked
-                                ? null
-                                : () {
-                                    widget.audioPlayer.pause();
-                                    Navigator.of(context)
-                                        .push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            GameScreen(level: level, equippedRod: _equippedRod),
-                                      ),
-                                    )
-                                        .then((result) {
-                                      widget.audioPlayer.resume();
-                                      setState(() {
-                                        _equippedRod = null;
-                                        if (result == true && level == _unlockedLevel) {
-                                          _unlockedLevel++;
-                                        }
-                                      });
-                                    });
-                                  },
-                          );
-                        }),
-                      ),
-                    ),
+                  child: FutureBuilder<int>(
+                    future: _unlockedLevelFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Center(
+                            child: Text('Error: ${snapshot.error}',
+                                style: const TextStyle(color: Colors.white)));
+                      } else {
+                        final unlockedLevel = snapshot.data ?? 1;
+                        return Center(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: List.generate(3, (index) {
+                                final level = index + 1;
+                                final isLocked = level > unlockedLevel;
+                                return LevelCard(
+                                  level: level,
+                                  isLocked: isLocked,
+                                  onTap: isLocked
+                                      ? null
+                                      : () async {
+                                          widget.audioPlayer.pause();
+                                          final result = await Navigator.of(
+                                                  context)
+                                              .push(
+                                            MaterialPageRoute(
+                                              builder: (context) => GameScreen(
+                                                  level: level,
+                                                  equippedRod: _equippedRod),
+                                            ),
+                                          );
+                                          widget.audioPlayer.resume();
+                                          setState(() {
+                                            _equippedRod = null;
+                                            if (result is int &&
+                                                _userId != null) {
+                                              try {
+                                                _storyRepository
+                                                    .completeLevel(_userId!,
+                                                        level, result)
+                                                    .then((_) {
+                                                  _loadUnlockedLevel();
+                                                });
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                          'Error al completar el nivel: $e'),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            }
+                                          });
+                                        },
+                                );
+                              }),
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ),
               ],
