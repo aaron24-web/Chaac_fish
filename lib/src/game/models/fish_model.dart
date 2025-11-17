@@ -8,8 +8,10 @@ class Fish {
   final int points;
   final FishType type;
   Offset position;
-  final double speed;
+  double speed;
+  final double originalSpeed;
   final bool goesRight; // Direction of movement
+  bool isStunned;
 
   Fish({
     required this.id,
@@ -17,9 +19,11 @@ class Fish {
     required this.points,
     required this.type,
     required this.position,
-    required this.speed,
+    required double speed,
     required this.goesRight,
-  });
+    this.isStunned = false,
+  })  : speed = speed,
+        originalSpeed = speed;
 
   // Method to get the full image path
   String get imagePath => 'assets/images/fish/$imageName.png';

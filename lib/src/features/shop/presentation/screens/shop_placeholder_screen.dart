@@ -4,7 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
 class ShopPlaceholderScreen extends StatefulWidget {
-  const ShopPlaceholderScreen({super.key});
+  final Function(ShopItem) onRodEquipped;
+  final ShopItem? equippedRod;
+  const ShopPlaceholderScreen({super.key, required this.onRodEquipped, this.equippedRod});
 
   @override
   State<ShopPlaceholderScreen> createState() => _ShopPlaceholderScreenState();
@@ -54,7 +56,11 @@ class _ShopPlaceholderScreenState extends State<ShopPlaceholderScreen> {
             ),
             itemCount: items.length,
             itemBuilder: (context, index) {
-              return ShopItemCard(item: items[index]);
+              return ShopItemCard(
+                item: items[index],
+                onRodEquipped: widget.onRodEquipped,
+                equippedRod: widget.equippedRod,
+              );
             },
           );
         },
@@ -65,8 +71,10 @@ class _ShopPlaceholderScreenState extends State<ShopPlaceholderScreen> {
 
 class ShopItemCard extends StatefulWidget {
   final ShopItem item;
+  final Function(ShopItem) onRodEquipped;
+  final ShopItem? equippedRod;
 
-  const ShopItemCard({super.key, required this.item});
+  const ShopItemCard({super.key, required this.item, required this.onRodEquipped, this.equippedRod});
 
   @override
   State<ShopItemCard> createState() => _ShopItemCardState();
@@ -91,6 +99,38 @@ class _ShopItemCardState extends State<ShopItemCard> {
   void dispose() {
     _videoController.dispose();
     super.dispose();
+  }
+
+  void _handlePurchase() {
+    if (widget.equippedRod != null && widget.equippedRod!.id != widget.item.id) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('¿Estás seguro?'),
+          content: const Text('Tu anterior item se perderá.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Compra incompleta')),
+                );
+              },
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                widget.onRodEquipped(widget.item);
+              },
+              child: const Text('Sí'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      widget.onRodEquipped(widget.item);
+    }
   }
 
   @override
@@ -144,9 +184,7 @@ class _ShopItemCardState extends State<ShopItemCard> {
                         ),
                       ),
                       ElevatedButton(
-                        onPressed: () {
-                          // TODO: Implement buy logic
-                        },
+                        onPressed: _handlePurchase,
                         child: const Text('Comprar'),
                       ),
                     ],

@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:pesca_game/src/features/game_mode/presentation/screens/game_screen.dart';
+import 'package:pesca_game/src/features/shop/domain/models/shop_item_model.dart';
 import 'package:pesca_game/src/features/shop/presentation/screens/shop_placeholder_screen.dart';
 import 'package:video_player/video_player.dart';
 
@@ -12,8 +13,9 @@ class StoryMenuScreen extends StatefulWidget {
 }
 class _StoryMenuScreenState extends State<StoryMenuScreen> {
   late VideoPlayerController _videoController;
-  // Hardcoded for now, will be fetched from Supabase later
   int _unlockedLevel = 1;
+  ShopItem? _equippedRod;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +33,19 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
     _videoController.dispose();
     super.dispose();
   }
+
+  void _onRodEquipped(ShopItem rod) {
+    setState(() {
+      _equippedRod = rod;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${rod.name} equipada!'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,7 +79,10 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => const ShopPlaceholderScreen(),
+                            builder: (context) => ShopPlaceholderScreen(
+                              onRodEquipped: _onRodEquipped,
+                              equippedRod: _equippedRod,
+                            ),
                           ),
                         );
                       },
@@ -90,16 +108,17 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                                         .push(
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            GameScreen(level: level),
+                                            GameScreen(level: level, equippedRod: _equippedRod),
                                       ),
                                     )
                                         .then((result) {
                                       widget.audioPlayer.resume();
-                                      if (result == true && level == _unlockedLevel) {
-                                        setState(() {
+                                      setState(() {
+                                        _equippedRod = null;
+                                        if (result == true && level == _unlockedLevel) {
                                           _unlockedLevel++;
-                                        });
-                                      }
+                                        }
+                                      });
                                     });
                                   },
                           );

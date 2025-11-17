@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:pesca_game/src/features/shop/domain/models/shop_item_model.dart';
 import 'package:pesca_game/src/game/models/fish_model.dart';
 import 'package:pesca_game/src/game/widgets/fish_widget.dart';
 import 'package:video_player/video_player.dart';
@@ -16,8 +17,9 @@ class Explosion {
 
 class GameScreen extends StatefulWidget {
   final int level;
+  final ShopItem? equippedRod;
 
-  const GameScreen({super.key, required this.level});
+  const GameScreen({super.key, required this.level, this.equippedRod});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -35,6 +37,7 @@ class _GameScreenState extends State<GameScreen>
   bool _isChaacFishing = false;
   int _currentScore = 0;
   int _targetScore = 10;
+  Timer? _paralyzeTimer;
 
   // Hardcoded list of available fish. Later, this can be fetched from the DB.
   final List<Map<String, dynamic>> _availableFishTypes = [
@@ -74,6 +77,28 @@ class _GameScreenState extends State<GameScreen>
     Timer.periodic(const Duration(seconds: 2), (_) {
       _spawnFish();
     });
+
+    if (widget.equippedRod?.abilityCode == 'PARALYZE_CHANCE') {
+      _paralyzeTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (_random.nextDouble() < 0.20 && _fishes.isNotEmpty) {
+          final fishToParalyze = _fishes[_random.nextInt(_fishes.length)];
+          if (fishToParalyze.speed != 0) {
+            setState(() {
+              fishToParalyze.speed = 0;
+              fishToParalyze.isStunned = true;
+            });
+            Timer(const Duration(seconds: 5), () {
+              if (mounted) {
+                setState(() {
+                  fishToParalyze.speed = fishToParalyze.originalSpeed;
+                  fishToParalyze.isStunned = false;
+                });
+              }
+            });
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -83,6 +108,7 @@ class _GameScreenState extends State<GameScreen>
     _gameLoop.dispose();
     _sfxPlayer.dispose();
     _backgroundMusicPlayer.dispose();
+    _paralyzeTimer?.cancel();
     super.dispose();
   }
 
@@ -189,11 +215,23 @@ class _GameScreenState extends State<GameScreen>
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       position: fish.position,
     );
+
+    int pointsToAdd = fish.points;
+    if (widget.equippedRod != null) {
+      final abilityCode = widget.equippedRod!.abilityCode;
+      if (abilityCode == 'EXTRA_POINT_CHANCE' && _random.nextDouble() < 0.25) {
+        pointsToAdd += 1;
+      }
+      if (abilityCode == 'DOUBLE_POINTS_CHANCE' && _random.nextDouble() < 0.15) {
+        pointsToAdd *= 2;
+      }
+    }
+
     setState(() {
       _isChaacFishing = true;
       _explosions.add(explosion);
       _fishes.remove(fish);
-      _currentScore += fish.points;
+      _currentScore += pointsToAdd;
     });
 
     if (_currentScore >= _targetScore) {
@@ -299,25 +337,37 @@ class _GameScreenState extends State<GameScreen>
 
           // UI on top
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: _onBackPressed,
                   ),
-                  Text(
-                    'Puntaje: $_currentScore / $_targetScore',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                ),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Puntaje: $_currentScore / $_targetScore',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (widget.equippedRod != null)
+                          EquippedRodWidget(rod: widget.equippedRod!),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -340,6 +390,48 @@ class ExplosionWidget extends StatelessWidget {
         'assets/images/animations/gota_explosion.gif',
         width: 80,
       ),
+    );
+  }
+}
+
+class EquippedRodWidget extends StatefulWidget {
+  final ShopItem rod;
+
+  const EquippedRodWidget({super.key, required this.rod});
+
+  @override
+  State<EquippedRodWidget> createState() => _EquippedRodWidgetState();
+}
+
+class _EquippedRodWidgetState extends State<EquippedRodWidget> {
+  late VideoPlayerController _videoController;
+
+  @override
+  void initState() {
+    super.initState();
+    _videoController = VideoPlayerController.asset(widget.rod.videoPath)
+      ..initialize().then((_) {
+        _videoController.setLooping(true);
+        _videoController.setVolume(0);
+        _videoController.play();
+        setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 50,
+      height: 50,
+      child: _videoController.value.isInitialized
+          ? VideoPlayer(_videoController)
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }
