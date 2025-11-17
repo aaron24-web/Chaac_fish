@@ -13,7 +13,7 @@ class StoryMenuScreen extends StatefulWidget {
 class _StoryMenuScreenState extends State<StoryMenuScreen> {
   late VideoPlayerController _videoController;
   // Hardcoded for now, will be fetched from Supabase later
-  final int unlockedLevel = 1;
+  int _unlockedLevel = 1;
   @override
   void initState() {
     super.initState();
@@ -78,7 +78,7 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                       child: Row(
                         children: List.generate(3, (index) {
                           final level = index + 1;
-                          final isLocked = level > unlockedLevel;
+                          final isLocked = level > _unlockedLevel;
                           return LevelCard(
                             level: level,
                             isLocked: isLocked,
@@ -86,12 +86,21 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                                 ? null
                                 : () {
                                     widget.audioPlayer.pause();
-                                    Navigator.of(context).push(
+                                    Navigator.of(context)
+                                        .push(
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             GameScreen(level: level),
                                       ),
-                                    ).then((_) => widget.audioPlayer.resume());
+                                    )
+                                        .then((result) {
+                                      widget.audioPlayer.resume();
+                                      if (result == true && level == _unlockedLevel) {
+                                        setState(() {
+                                          _unlockedLevel++;
+                                        });
+                                      }
+                                    });
                                   },
                           );
                         }),
@@ -133,6 +142,7 @@ class LevelCard extends StatelessWidget {
         height: 200,
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(15),
           image: DecorationImage(
             image: AssetImage(imagePath),

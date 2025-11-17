@@ -33,6 +33,8 @@ class _GameScreenState extends State<GameScreen>
   late AudioPlayer _sfxPlayer;
   late AudioPlayer _backgroundMusicPlayer;
   bool _isChaacFishing = false;
+  int _currentScore = 0;
+  int _targetScore = 10;
 
   // Hardcoded list of available fish. Later, this can be fetched from the DB.
   final List<Map<String, dynamic>> _availableFishTypes = [
@@ -117,6 +119,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _spawnFish() {
+    if (!_gameLoop.isAnimating) return;
     if (!mounted) return;
 
     final screenSize = MediaQuery.of(context).size;
@@ -190,7 +193,12 @@ class _GameScreenState extends State<GameScreen>
       _isChaacFishing = true;
       _explosions.add(explosion);
       _fishes.remove(fish);
+      _currentScore += fish.points;
     });
+
+    if (_currentScore >= _targetScore) {
+      _handleWin();
+    }
 
     Timer(const Duration(seconds: 1), () {
       if (!mounted) return;
@@ -213,6 +221,32 @@ class _GameScreenState extends State<GameScreen>
         _backgroundMusicPlayer.setVolume(1.0);
       });
     }
+  }
+
+  void _handleWin() {
+    _gameLoop.stop();
+    _backgroundMusicPlayer.stop();
+    _videoController.pause();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('¡Ganaste!'),
+          content: Text('Alcanzaste los $_targetScore puntos.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop(true); // Go back with a win result
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -265,19 +299,25 @@ class _GameScreenState extends State<GameScreen>
 
           // UI on top
           SafeArea(
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: _onBackPressed,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: _onBackPressed,
+                  ),
+                  Text(
+                    'Puntaje: $_currentScore / $_targetScore',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
-                // Game content will go here
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
