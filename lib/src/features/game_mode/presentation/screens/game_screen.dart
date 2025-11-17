@@ -38,16 +38,11 @@ class _GameScreenState extends State<GameScreen>
   int _currentScore = 0;
   int _targetScore = 10;
   Timer? _paralyzeTimer;
+  bool _isLloronaScreaming = false;
+  late VideoPlayerController _lloronaVideoController;
 
   // Hardcoded list of available fish. Later, this can be fetched from the DB.
-  final List<Map<String, dynamic>> _availableFishTypes = [
-    {'name': 'blue_fish', 'points': 1, 'type': FishType.normal},
-    {'name': 'orange_fish', 'points': 1, 'type': FishType.normal},
-    {'name': 'pink_fish', 'points': 1, 'type': FishType.normal},
-    {'name': 'red_fish', 'points': 1, 'type': FishType.normal},
-    {'name': 'cabello_special', 'points': 5, 'type': FishType.especial_bueno},
-    {'name': 'mariachi_special', 'points': 5, 'type': FishType.especial_bueno},
-  ];
+  List<Map<String, dynamic>> _availableFishTypes = [];
 
   @override
   void initState() {
@@ -56,7 +51,46 @@ class _GameScreenState extends State<GameScreen>
     _backgroundMusicPlayer = AudioPlayer();
     _backgroundMusicPlayer.setReleaseMode(ReleaseMode.loop);
 
-    _videoController = VideoPlayerController.asset('assets/videos/utm_fondo.mp4')
+    // Define base fish for all levels
+    _availableFishTypes = [
+      {'name': 'blue_fish', 'points': 1, 'type': FishType.normal},
+      {'name': 'orange_fish', 'points': 1, 'type': FishType.normal},
+      {'name': 'pink_fish', 'points': 1, 'type': FishType.normal},
+      {'name': 'red_fish', 'points': 1, 'type': FishType.normal},
+      {'name': 'cabello_special', 'points': 5, 'type': FishType.especial_bueno},
+      {'name': 'mariachi_special', 'points': 5, 'type': FishType.especial_bueno},
+    ];
+
+    // Add dangerous fish for level 2 and above
+    if (widget.level >= 2) {
+      _availableFishTypes.addAll([
+        {'name': 'snake_danger', 'points': -5, 'type': FishType.danger},
+        {'name': 'llorona_danger', 'points': 0, 'type': FishType.danger},
+        {'name': 'diablo_danger', 'points': -10, 'type': FishType.danger},
+      ]);
+    }
+
+    String videoPath;
+    String audioPath;
+
+    switch (widget.level) {
+      case 1:
+        videoPath = 'assets/videos/utm_fondo.mp4';
+        audioPath = 'audio/music/nivel1_sound.mp3';
+        _targetScore = 10;
+        break;
+      case 2:
+        videoPath = 'assets/videos/iza_nivel2.mp4';
+        audioPath = 'audio/music/nivel2.mp3';
+        _targetScore = 20;
+        break;
+      default:
+        videoPath = 'assets/videos/utm_fondo.mp4';
+        audioPath = 'audio/music/nivel1_sound.mp3';
+        _targetScore = 10;
+    }
+
+    _videoController = VideoPlayerController.asset(videoPath)
       ..initialize().then((_) {
         _videoController.play();
         _videoController.setVolume(0);
@@ -64,7 +98,7 @@ class _GameScreenState extends State<GameScreen>
         setState(() {});
       });
 
-    _backgroundMusicPlayer.play(AssetSource('audio/music/nivel1_sound.mp3'));
+    _backgroundMusicPlayer.play(AssetSource(audioPath));
 
     _gameLoop = AnimationController(
       vsync: this,
@@ -109,6 +143,9 @@ class _GameScreenState extends State<GameScreen>
     _sfxPlayer.dispose();
     _backgroundMusicPlayer.dispose();
     _paralyzeTimer?.cancel();
+    if (_isLloronaScreaming) {
+      _lloronaVideoController.dispose();
+    }
     super.dispose();
   }
 
@@ -210,6 +247,52 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
+  void _playSoundEffect(String soundAsset) {
+    _backgroundMusicPlayer.setVolume(0.2);
+    _sfxPlayer.play(AssetSource(soundAsset));
+    _sfxPlayer.onPlayerComplete.first.then((_) {
+      _backgroundMusicPlayer.setVolume(1.0);
+    });
+  }
+
+  void _handleLloronaEffect() {
+    _gameLoop.stop();
+    _backgroundMusicPlayer.pause();
+
+    setState(() {
+      _fishes.clear();
+    });
+
+    _lloronaVideoController =
+        VideoPlayerController.asset('assets/videos/scream_llorona.mp4');
+
+    void listener() {
+      if (_lloronaVideoController.value.isInitialized &&
+          !_lloronaVideoController.value.isPlaying &&
+          _lloronaVideoController.value.position >=
+              _lloronaVideoController.value.duration) {
+        _lloronaVideoController.removeListener(listener);
+        _lloronaVideoController.dispose();
+
+        setState(() {
+          _isLloronaScreaming = false;
+        });
+        _backgroundMusicPlayer.resume();
+        _gameLoop.repeat();
+      }
+    }
+
+    _lloronaVideoController.addListener(listener);
+
+    _lloronaVideoController.initialize().then((_) {
+      setState(() {
+        _isLloronaScreaming = true;
+      });
+      _lloronaVideoController.play();
+      _sfxPlayer.play(AssetSource('audio/sfx/llorona.mp3'));
+    });
+  }
+
   void _onFishTapped(Fish fish) {
     final explosion = Explosion(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -234,6 +317,20 @@ class _GameScreenState extends State<GameScreen>
       _currentScore += pointsToAdd;
     });
 
+    if (fish.type == FishType.danger) {
+      switch (fish.imageName) {
+        case 'snake_danger':
+          _playSoundEffect('audio/sfx/snake.mp3');
+          break;
+        case 'llorona_danger':
+          _handleLloronaEffect();
+          break;
+        case 'diablo_danger':
+          _playSoundEffect('audio/sfx/diablo.mp3');
+          break;
+      }
+    }
+
     if (_currentScore >= _targetScore) {
       _handleWin();
     }
@@ -253,11 +350,7 @@ class _GameScreenState extends State<GameScreen>
     });
 
     if (fish.imageName == 'cabello_special') {
-      _backgroundMusicPlayer.setVolume(0.2);
-      _sfxPlayer.play(AssetSource('audio/sfx/cabello.mp3'));
-      _sfxPlayer.onPlayerComplete.first.then((_) {
-        _backgroundMusicPlayer.setVolume(1.0);
-      });
+      _playSoundEffect('audio/sfx/cabello.mp3');
     }
   }
 
@@ -290,6 +383,18 @@ class _GameScreenState extends State<GameScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLloronaScreaming) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: AspectRatio(
+            aspectRatio: _lloronaVideoController.value.aspectRatio,
+            child: VideoPlayer(_lloronaVideoController),
+          ),
+        ),
+      );
+    }
+
     final chaacAnimation = _isChaacFishing
         ? 'assets/images/animations/chaac_pesco.gif'
         : 'assets/images/animations/chaac_estatico.gif';

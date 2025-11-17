@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum FishType { normal, especial_bueno, trampa }
+enum FishType { normal, especial_bueno, trampa, danger }
 
 class Fish {
   final String id;
