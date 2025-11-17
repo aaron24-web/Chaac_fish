@@ -4,9 +4,9 @@ enum FishType { normal, especial_bueno, trampa, danger }
 
 class Fish {
   final String id;
-  final String imageName;
-  final int points;
-  final FishType type;
+  String imageName;
+  int points;
+  FishType type;
   Offset position;
   double speed;
   final double originalSpeed;

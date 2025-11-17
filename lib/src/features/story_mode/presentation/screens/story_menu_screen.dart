@@ -206,7 +206,7 @@ class LevelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // The image path is constructed dynamically based on the level.
     // e.g., assets/images/ui/boton_nivel1.png for level 1.
-    final imagePath = level == 2
+    final imagePath = (level == 2 || level == 3)
         ? 'assets/images/ui/boton_nivel$level.jpeg'
         : 'assets/images/ui/boton_nivel$level.png';
 

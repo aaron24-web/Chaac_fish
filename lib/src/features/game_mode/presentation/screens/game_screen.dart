@@ -40,6 +40,8 @@ class _GameScreenState extends State<GameScreen>
   Timer? _paralyzeTimer;
   bool _isLloronaScreaming = false;
   late VideoPlayerController _lloronaVideoController;
+  bool _isAxolotlAnimating = false;
+  late VideoPlayerController _axolotlVideoController;
 
   // Hardcoded list of available fish. Later, this can be fetched from the DB.
   List<Map<String, dynamic>> _availableFishTypes = [];
@@ -70,6 +72,12 @@ class _GameScreenState extends State<GameScreen>
       ]);
     }
 
+    // Add exclusive fish for level 3
+    if (widget.level == 3) {
+      _availableFishTypes.add(
+          {'name': 'axolott_special', 'points': 0, 'type': FishType.especial_bueno});
+    }
+
     String videoPath;
     String audioPath;
 
@@ -83,6 +91,11 @@ class _GameScreenState extends State<GameScreen>
         videoPath = 'assets/videos/iza_nivel2.mp4';
         audioPath = 'audio/music/nivel2.mp3';
         _targetScore = 20;
+        break;
+      case 3:
+        videoPath = 'assets/videos/chichen_fondo.mp4';
+        audioPath = 'audio/music/nivel3.mp3';
+        _targetScore = 30;
         break;
       default:
         videoPath = 'assets/videos/utm_fondo.mp4';
@@ -145,6 +158,9 @@ class _GameScreenState extends State<GameScreen>
     _paralyzeTimer?.cancel();
     if (_isLloronaScreaming) {
       _lloronaVideoController.dispose();
+    }
+    if (_isAxolotlAnimating) {
+      _axolotlVideoController.dispose();
     }
     super.dispose();
   }
@@ -290,10 +306,88 @@ class _GameScreenState extends State<GameScreen>
       });
       _lloronaVideoController.play();
       _sfxPlayer.play(AssetSource('audio/sfx/llorona.mp3'));
+    }).catchError((error) {
+      debugPrint("Error loading Llorona video: $error");
+      _backgroundMusicPlayer.resume();
+      _gameLoop.repeat();
+    });
+  }
+
+  void _handleAxolotlEffect() {
+    _gameLoop.stop();
+    _backgroundMusicPlayer.pause();
+
+    setState(() {
+      for (var fish in _fishes) {
+        if (fish.type == FishType.danger) {
+          fish.type = FishType.especial_bueno;
+          fish.points = 5;
+          fish.imageName = _random.nextBool() ? 'cabello_special' : 'mariachi_special';
+        }
+      }
+    });
+
+    _axolotlVideoController =
+        VideoPlayerController.asset('assets/videos/axo_anima.mp4');
+
+    void listener() {
+      if (_axolotlVideoController.value.isInitialized &&
+          !_axolotlVideoController.value.isPlaying &&
+          _axolotlVideoController.value.position >=
+              _axolotlVideoController.value.duration) {
+        _axolotlVideoController.removeListener(listener);
+        _axolotlVideoController.dispose();
+
+        setState(() {
+          _isAxolotlAnimating = false;
+        });
+        _backgroundMusicPlayer.resume();
+        _gameLoop.repeat();
+      }
+    }
+
+    _axolotlVideoController.addListener(listener);
+
+    _axolotlVideoController.initialize().then((_) {
+      setState(() {
+        _isAxolotlAnimating = true;
+      });
+      _axolotlVideoController.play();
+    }).catchError((error) {
+      debugPrint("Error loading Axolotl video: $error");
+      _backgroundMusicPlayer.resume();
+      _gameLoop.repeat();
     });
   }
 
   void _onFishTapped(Fish fish) {
+    // Handle special fish effects first
+    switch (fish.imageName) {
+      case 'axolott_special':
+        _handleAxolotlEffect();
+        break;
+      case 'snake_danger':
+        _playSoundEffect('audio/sfx/snake.mp3');
+        break;
+      case 'llorona_danger':
+        _handleLloronaEffect();
+        break;
+      case 'diablo_danger':
+        _playSoundEffect('audio/sfx/diablo.mp3');
+        break;
+      case 'cabello_special':
+        _playSoundEffect('audio/sfx/cabello.mp3');
+        break;
+    }
+
+    // Don't process tap for Llorona or Axolotl video effects
+    if (fish.imageName == 'llorona_danger' || fish.imageName == 'axolott_special') {
+      setState(() {
+        _fishes.remove(fish);
+      });
+      return;
+    }
+
     final explosion = Explosion(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       position: fish.position,
@@ -317,20 +411,6 @@ class _GameScreenState extends State<GameScreen>
       _currentScore += pointsToAdd;
     });
 
-    if (fish.type == FishType.danger) {
-      switch (fish.imageName) {
-        case 'snake_danger':
-          _playSoundEffect('audio/sfx/snake.mp3');
-          break;
-        case 'llorona_danger':
-          _handleLloronaEffect();
-          break;
-        case 'diablo_danger':
-          _playSoundEffect('audio/sfx/diablo.mp3');
-          break;
-      }
-    }
-
     if (_currentScore >= _targetScore) {
       _handleWin();
     }
@@ -348,10 +428,6 @@ class _GameScreenState extends State<GameScreen>
         _explosions.remove(explosion);
       });
     });
-
-    if (fish.imageName == 'cabello_special') {
-      _playSoundEffect('audio/sfx/cabello.mp3');
-    }
   }
 
   void _handleWin() {
@@ -390,6 +466,18 @@ class _GameScreenState extends State<GameScreen>
           child: AspectRatio(
             aspectRatio: _lloronaVideoController.value.aspectRatio,
             child: VideoPlayer(_lloronaVideoController),
+          ),
+        ),
+      );
+    }
+
+    if (_isAxolotlAnimating) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: AspectRatio(
+            aspectRatio: _axolotlVideoController.value.aspectRatio,
+            child: VideoPlayer(_axolotlVideoController),
           ),
         ),
       );
@@ -436,8 +524,7 @@ class _GameScreenState extends State<GameScreen>
                     key: ValueKey(fish.id),
                     fish: fish,
                     onTapped: _onFishTapped,
-                  ))
-              .toList(),
+                  )),
 
           // Explosion Widgets
           ..._explosions.map((explosion) => ExplosionWidget(explosion: explosion)),
