@@ -7,6 +7,13 @@ import 'package:pesca_game/src/game/models/fish_model.dart';
 import 'package:pesca_game/src/game/widgets/fish_widget.dart';
 import 'package:video_player/video_player.dart';
 
+class Explosion {
+  final String id;
+  final Offset position;
+
+  Explosion({required this.id, required this.position});
+}
+
 class GameScreen extends StatefulWidget {
   final int level;
 
@@ -21,9 +28,11 @@ class _GameScreenState extends State<GameScreen>
   late VideoPlayerController _videoController;
   late AnimationController _gameLoop;
   final List<Fish> _fishes = [];
+  final List<Explosion> _explosions = [];
   final Random _random = Random();
   late AudioPlayer _sfxPlayer;
   late AudioPlayer _backgroundMusicPlayer;
+  bool _isChaacFishing = false;
 
   // Hardcoded list of available fish. Later, this can be fetched from the DB.
   final List<Map<String, dynamic>> _availableFishTypes = [
@@ -173,6 +182,30 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _onFishTapped(Fish fish) {
+    final explosion = Explosion(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      position: fish.position,
+    );
+    setState(() {
+      _isChaacFishing = true;
+      _explosions.add(explosion);
+      _fishes.remove(fish);
+    });
+
+    Timer(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {
+        _isChaacFishing = false;
+      });
+    });
+
+    Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      setState(() {
+        _explosions.remove(explosion);
+      });
+    });
+
     if (fish.imageName == 'cabello_special') {
       _backgroundMusicPlayer.setVolume(0.2);
       _sfxPlayer.play(AssetSource('audio/sfx/cabello.mp3'));
@@ -180,13 +213,14 @@ class _GameScreenState extends State<GameScreen>
         _backgroundMusicPlayer.setVolume(1.0);
       });
     }
-    setState(() {
-      _fishes.remove(fish);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final chaacAnimation = _isChaacFishing
+        ? 'assets/images/animations/chaac_pesco.gif'
+        : 'assets/images/animations/chaac_estatico.gif';
+
     return Scaffold(
       body: Stack(
         children: [
@@ -209,7 +243,7 @@ class _GameScreenState extends State<GameScreen>
             child: Padding(
               padding: const EdgeInsets.only(top: 50.0),
               child: Image.asset(
-                'assets/images/chaac_cloud_sc_nf.png',
+                chaacAnimation,
                 width: 200,
                 errorBuilder: (context, error, stackTrace) {
                   return const Icon(Icons.error, color: Colors.red, size: 50);
@@ -225,6 +259,9 @@ class _GameScreenState extends State<GameScreen>
                     onTapped: _onFishTapped,
                   ))
               .toList(),
+
+          // Explosion Widgets
+          ..._explosions.map((explosion) => ExplosionWidget(explosion: explosion)),
 
           // UI on top
           SafeArea(
@@ -244,6 +281,24 @@ class _GameScreenState extends State<GameScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ExplosionWidget extends StatelessWidget {
+  final Explosion explosion;
+
+  const ExplosionWidget({super.key, required this.explosion});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: explosion.position.dx,
+      top: explosion.position.dy,
+      child: Image.asset(
+        'assets/images/animations/gota_explosion.gif',
+        width: 80,
       ),
     );
   }
