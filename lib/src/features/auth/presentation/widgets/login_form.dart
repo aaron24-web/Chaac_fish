@@ -42,6 +42,21 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    try {
+      await AuthRepository.signInWithGoogle();
+      widget.audioPlayer.stop();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const GameMenuScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Ocurrió un error al iniciar sesión con Google')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -77,6 +92,11 @@ class _LoginFormState extends State<LoginForm> {
                 CustomButton(
                   onPressed: _login,
                   text: 'Iniciar Sesión',
+                ),
+                const SizedBox(height: 16),
+                CustomButton(
+                  onPressed: _signInWithGoogle,
+                  text: 'Iniciar Sesión con Google',
                 ),
                 TextButton(
                   onPressed: widget.onRegisterPressed,
