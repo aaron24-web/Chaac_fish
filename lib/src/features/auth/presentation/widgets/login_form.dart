@@ -50,9 +50,10 @@ class _LoginFormState extends State<LoginForm> {
         MaterialPageRoute(builder: (context) => const GameMenuScreen()),
       );
     } catch (e) {
+      debugPrint('Error en Google Sign In: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Ocurrió un error al iniciar sesión con Google')),
+        SnackBar(
+            content: Text('Ocurrió un error al iniciar sesión con Google: $e')),
       );
     }
   }

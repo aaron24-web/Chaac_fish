@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart' as gsi;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthRepository {
@@ -11,14 +11,15 @@ class AuthRepository {
 
   static Future<UserCredential> signInWithGoogle() async {
     // Trigger the authentication flow
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    final gsi.GoogleSignInAccount? googleUser = await gsi.GoogleSignIn().signIn();
 
     // Obtain the auth details from the request
-    final GoogleSignInAuthentication? googleAuth = googleUser?.authentication;
+    final gsi.GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
 
     // Create a new credential
     final credential = GoogleAuthProvider.credential(
       idToken: googleAuth?.idToken,
+      accessToken: googleAuth?.accessToken,
     );
 
     // Once signed in, return the UserCredential

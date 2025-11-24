@@ -27,6 +27,8 @@ class _AuthScreenState extends State<AuthScreen> {
         setState(() {});
       });
     _audioPlayer = AudioPlayer();
+    _audioPlayer.setReleaseMode(ReleaseMode.loop);
+    _audioPlayer.setVolume(1.0);
     _audioPlayer.play(AssetSource('audio/music/musica_inicio.mp3'));
   }
 

@@ -111,6 +111,8 @@ class _GameScreenState extends State<GameScreen>
         setState(() {});
       });
 
+    // Ensure volume is set before playing
+    _backgroundMusicPlayer.setVolume(1.0);
     _backgroundMusicPlayer.play(AssetSource(audioPath));
 
     _gameLoop = AnimationController(
@@ -202,13 +204,21 @@ class _GameScreenState extends State<GameScreen>
     if (!mounted) return;
 
     final screenSize = MediaQuery.of(context).size;
+    final padding = MediaQuery.of(context).padding;
     final fishTypeData =
         _availableFishTypes[_random.nextInt(_availableFishTypes.length)];
 
     final bool goesRight = _random.nextBool();
-    final double verticalPosition =
-        _random.nextDouble() * (screenSize.height / 3) +
-            (screenSize.height * 2 / 3); // Spawn in the lower 1/3 of the screen
+    
+    // Fix: Adjust vertical position to prevent fish from being cut off at the bottom
+    // Spawn between 60% of screen height and (Screen Height - 150px - bottom padding)
+    final double minY = screenSize.height * 0.50; // Subí un poco el inicio (50%) para dar más espacio
+    final double maxY = screenSize.height - 150.0 - padding.bottom;
+    // Ensure maxY is greater than minY to avoid range error
+    final double safeMaxY = maxY > minY ? maxY : minY + 50;
+    
+    final double verticalPosition = minY + _random.nextDouble() * (safeMaxY - minY);
+    
     final double horizontalPosition = goesRight ? -80 : screenSize.width;
     final double speed = _random.nextDouble() * 2 + 1; // Speed between 1.0 and 3.0
 
@@ -264,11 +274,13 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _playSoundEffect(String soundAsset) {
-    _backgroundMusicPlayer.setVolume(0.2);
+    // Eliminamos la reducción de volumen de la música de fondo para evitar bugs
+    // donde el volumen no regresa a la normalidad si se reproducen muchos sonidos.
+    // _backgroundMusicPlayer.setVolume(0.2); 
     _sfxPlayer.play(AssetSource(soundAsset));
-    _sfxPlayer.onPlayerComplete.first.then((_) {
-      _backgroundMusicPlayer.setVolume(1.0);
-    });
+    // _sfxPlayer.onPlayerComplete.first.then((_) {
+    //   _backgroundMusicPlayer.setVolume(1.0);
+    // });
   }
 
   void _handleLloronaEffect() {
