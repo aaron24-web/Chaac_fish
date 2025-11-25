@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
+import 'package:pesca_game/src/features/shop/data/stripe_service.dart';
 import 'package:pesca_game/src/features/shop/domain/models/shop_item_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
@@ -82,6 +84,7 @@ class ShopItemCard extends StatefulWidget {
 
 class _ShopItemCardState extends State<ShopItemCard> {
   late VideoPlayerController _videoController;
+  final StripeService _stripeService = StripeService();
 
   @override
   void initState() {
@@ -101,8 +104,7 @@ class _ShopItemCardState extends State<ShopItemCard> {
     super.dispose();
   }
 
-  void _handlePurchase() {
-    // Prevent buying the same equipped rod again
+  Future<void> _handlePurchase() async {
     if (widget.equippedRod?.id == widget.item.id) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ya tienes esta caña equipada.')),
@@ -111,22 +113,38 @@ class _ShopItemCardState extends State<ShopItemCard> {
     }
 
     final bool isReplacement = widget.equippedRod != null;
-
     if (isReplacement) {
-      // Show replacement warning first
-      _showReplacementWarning().then((confirmed) {
-        if (confirmed == true) {
-          // If confirmed, show purchase details
-          _showPurchaseConfirmation();
-        }
-      });
-    } else {
-      // Not a replacement, just show purchase confirmation
-      _showPurchaseConfirmation();
+      final confirmed = await _showReplacementWarning();
+      if (confirmed != true) {
+        return;
+      }
+    }
+
+    try {
+      final paymentIntent = await _stripeService.createPaymentIntent(widget.item.price, 'usd');
+      if (!mounted) return;
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: paymentIntent['client_secret'],
+          merchantDisplayName: 'Pesca Game',
+        ),
+      );
+
+      await Stripe.instance.presentPaymentSheet();
+      if (!mounted) return;
+
+      widget.onRodEquipped(widget.item);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Compra exitosa!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error en la compra: $e')),
+      );
     }
   }
 
-  // Shows the replacement warning dialog
   Future<bool?> _showReplacementWarning() {
     return showDialog<bool>(
       context: context,
@@ -135,52 +153,11 @@ class _ShopItemCardState extends State<ShopItemCard> {
         content: const Text('¿Estás seguro de comprar otra caña? Esto hará que tu caña anterior desaparezca.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false), // Not confirmed
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('No'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true), // Confirmed
-            child: const Text('Sí'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Shows the purchase confirmation dialog
-  void _showPurchaseConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Detalles del pedido'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Item: ${widget.item.name}'),
-            Text('Precio: \$${widget.item.price.toStringAsFixed(2)}'),
-            const SizedBox(height: 16),
-            const Text('¿Estás seguro de proceder con el pago?'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Compra cancelada.')),
-              );
-            },
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              widget.onRodEquipped(widget.item);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('¡Compra exitosa!')),
-              );
-            },
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Sí'),
           ),
         ],

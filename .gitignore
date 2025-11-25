@@ -58,3 +58,4 @@ app.*.map.json
 __MACOSX/
 .DS_Store
 /assets/videos/
+.env

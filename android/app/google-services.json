@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "48066165712-021rr822g654u975iso8jfuuh5dcrl0c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pesca_game",
+            "certificate_hash": "e4bf8074780e2850f92582cd88ccadbf872fa41d"
+          }
+        },
+        {
+          "client_id": "48066165712-97gmbpkgdfknimmhvu5qh2drres4pkvg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pesca_game",
+            "certificate_hash": "aa82f7aec9acec386e5ddbd0bef02a27a378c52a"
+          }
+        },
+        {
           "client_id": "48066165712-8cuvi19q46qgvhdvupgsfb9fqj5kioij.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +45,13 @@
             {
               "client_id": "48066165712-8cuvi19q46qgvhdvupgsfb9fqj5kioij.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "48066165712-5iiutak2s3pj0ikruph4uo9c0b6isup1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pescaGame"
+              }
             }
           ]
         }
