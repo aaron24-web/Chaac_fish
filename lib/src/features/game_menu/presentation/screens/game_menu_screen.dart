@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:pesca_game/src/features/auth/presentation/screens/auth_screen.dart';
 import 'package:pesca_game/src/features/multiplayer/presentation/screens/multiplayer_menu_screen.dart';
 import 'package:pesca_game/src/features/story_mode/presentation/screens/story_menu_screen.dart';
-import 'package:pesca_game/src/shared/widgets/custom_button.dart';
 
 class GameMenuScreen extends StatefulWidget {
   const GameMenuScreen({super.key});
@@ -20,13 +19,14 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
   @override
   void initState() {
     super.initState();
-    _videoController = VideoPlayerController.asset('assets/videos/fondo_menu1.mp4')
-      ..initialize().then((_) {
-        _videoController.play();
-        _videoController.setVolume(0);
-        _videoController.setLooping(true);
-        setState(() {});
-      });
+    _videoController =
+        VideoPlayerController.asset('assets/videos/fondo_menu1.mp4')
+          ..initialize().then((_) {
+            _videoController.play();
+            _videoController.setVolume(0);
+            _videoController.setLooping(true);
+            setState(() {});
+          });
     _audioPlayer = AudioPlayer();
     _audioPlayer.play(AssetSource('audio/music/music_menu1.mp3'));
   }
@@ -55,9 +55,7 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
 
   void _navigateToMultiplayerMode() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const MultiplayerMenuScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const MultiplayerMenuScreen()),
     );
   }
 
@@ -81,21 +79,73 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CustomButton(
-                  onPressed: _navigateToStoryMode,
-                  text: 'Modo Historia',
+                GestureDetector(
+                  onTap: _navigateToStoryMode,
+                  child: Container(
+                    width: 300,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/madera/TablaRes.png'),
+                        fit: BoxFit.fill,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Modo Historia',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 4.0,
+                              color: Colors.black,
+                              offset: Offset(2.0, 2.0),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
-                CustomButton(
-                  onPressed: _navigateToMultiplayerMode,
-                  text: 'Modo Multijugador',
+                GestureDetector(
+                  onTap: _navigateToMultiplayerMode,
+                  child: Container(
+                    width: 300,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/madera/TablaRes.png'),
+                        fit: BoxFit.fill,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Modo Multijugador',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 4.0,
+                              color: Colors.black,
+                              offset: Offset(2.0, 2.0),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 48),
                 TextButton(
                   onPressed: _logout,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
                   child: const Text('Cerrar Sesión'),
                 ),
               ],

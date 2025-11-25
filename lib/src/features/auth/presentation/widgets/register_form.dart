@@ -2,7 +2,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:pesca_game/src/features/auth/data/repositories/auth_repository.dart';
 import 'package:pesca_game/src/features/game_menu/presentation/screens/game_menu_screen.dart';
-import 'package:pesca_game/src/shared/widgets/custom_button.dart';
 
 class RegisterForm extends StatefulWidget {
   final VoidCallback onLoginPressed;
@@ -38,9 +37,9 @@ class _RegisterFormState extends State<RegisterForm> {
       final message = e.toString().contains('User already exists')
           ? 'El usuario ya existe'
           : 'Ocurrió un error';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -55,44 +54,139 @@ class _RegisterFormState extends State<RegisterForm> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre de usuario',
-                    filled: true,
-                    fillColor: Colors.white70,
+                // Username field with TablaRes1
+                Container(
+                  width: 280,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    image: const DecorationImage(
+                      image: AssetImage('assets/images/madera/TablaRes1.png'),
+                      fit: BoxFit.fill,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 30,
+                  ),
+                  child: TextFormField(
+                    controller: _usernameController,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: 'Nombre de usuario',
+                      hintStyle: TextStyle(color: Colors.black54),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Correo electrónico',
-                    filled: true,
-                    fillColor: Colors.white70,
+                const SizedBox(height: 8),
+                // Email field with TablaRes2
+                Container(
+                  width: 280,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    image: const DecorationImage(
+                      image: AssetImage('assets/images/madera/TablaRes2.png'),
+                      fit: BoxFit.fill,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  keyboardType: TextInputType.emailAddress,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 30,
+                  ),
+                  child: TextFormField(
+                    controller: _emailController,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: 'Correo electrónico',
+                      hintStyle: TextStyle(color: Colors.black54),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Contraseña',
-                    filled: true,
-                    fillColor: Colors.white70,
+                const SizedBox(height: 8),
+                // Password field with TablaRes3
+                Container(
+                  width: 280,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    image: const DecorationImage(
+                      image: AssetImage('assets/images/madera/TablaRes3.png'),
+                      fit: BoxFit.fill,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  obscureText: true,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 30,
+                  ),
+                  child: TextFormField(
+                    controller: _passwordController,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: 'Contraseña',
+                      hintStyle: TextStyle(color: Colors.black54),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                    ),
+                    obscureText: true,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                CustomButton(
-                  onPressed: _register,
-                  text: 'Registrarse',
+                // Register button with TablaRes
+                GestureDetector(
+                  onTap: _register,
+                  child: Container(
+                    width: 250,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/madera/TablaRes.png'),
+                        fit: BoxFit.fill,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Registrarse',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 4.0,
+                              color: Colors.black,
+                              offset: Offset(2.0, 2.0),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 TextButton(
                   onPressed: widget.onLoginPressed,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
                   child: const Text('¿Ya tienes cuenta? Inicia Sesión'),
                 ),
               ],

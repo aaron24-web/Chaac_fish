@@ -71,6 +71,7 @@ flutter:
     - assets/images/backgrounds/
     - assets/images/fish/
     - assets/images/animations/
+    - assets/images/madera/
     - assets/audio/
     - assets/audio/music/
     - assets/audio/sfx/

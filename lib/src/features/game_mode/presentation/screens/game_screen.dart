@@ -60,7 +60,11 @@ class _GameScreenState extends State<GameScreen>
       {'name': 'pink_fish', 'points': 1, 'type': FishType.normal},
       {'name': 'red_fish', 'points': 1, 'type': FishType.normal},
       {'name': 'cabello_special', 'points': 5, 'type': FishType.especial_bueno},
-      {'name': 'mariachi_special', 'points': 5, 'type': FishType.especial_bueno},
+      {
+        'name': 'mariachi_special',
+        'points': 5,
+        'type': FishType.especial_bueno,
+      },
     ];
 
     // Add dangerous fish for level 2 and above
@@ -70,12 +74,24 @@ class _GameScreenState extends State<GameScreen>
         {'name': 'llorona_danger', 'points': 0, 'type': FishType.danger},
         {'name': 'diablo_danger', 'points': -10, 'type': FishType.danger},
       ]);
+
+      // Bomb fish only in levels 2 and 3
+      if (widget.level == 2 || widget.level == 3) {
+        _availableFishTypes.add({
+          'name': 'bomb_fish',
+          'points': -15,
+          'type': FishType.danger,
+        });
+      }
     }
 
     // Add exclusive fish for level 3
     if (widget.level == 3) {
-      _availableFishTypes.add(
-          {'name': 'axolott_special', 'points': 0, 'type': FishType.especial_bueno});
+      _availableFishTypes.add({
+        'name': 'axolott_special',
+        'points': 0,
+        'type': FishType.especial_bueno,
+      });
     }
 
     String videoPath;
@@ -209,18 +225,22 @@ class _GameScreenState extends State<GameScreen>
         _availableFishTypes[_random.nextInt(_availableFishTypes.length)];
 
     final bool goesRight = _random.nextBool();
-    
+
     // Fix: Adjust vertical position to prevent fish from being cut off at the bottom
     // Spawn between 60% of screen height and (Screen Height - 150px - bottom padding)
-    final double minY = screenSize.height * 0.50; // Subí un poco el inicio (50%) para dar más espacio
+    final double minY =
+        screenSize.height *
+        0.50; // Subí un poco el inicio (50%) para dar más espacio
     final double maxY = screenSize.height - 150.0 - padding.bottom;
     // Ensure maxY is greater than minY to avoid range error
     final double safeMaxY = maxY > minY ? maxY : minY + 50;
-    
-    final double verticalPosition = minY + _random.nextDouble() * (safeMaxY - minY);
-    
+
+    final double verticalPosition =
+        minY + _random.nextDouble() * (safeMaxY - minY);
+
     final double horizontalPosition = goesRight ? -80 : screenSize.width;
-    final double speed = _random.nextDouble() * 2 + 1; // Speed between 1.0 and 3.0
+    final double speed =
+        _random.nextDouble() * 2 + 1; // Speed between 1.0 and 3.0
 
     final newFish = Fish(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -276,7 +296,7 @@ class _GameScreenState extends State<GameScreen>
   void _playSoundEffect(String soundAsset) {
     // Eliminamos la reducción de volumen de la música de fondo para evitar bugs
     // donde el volumen no regresa a la normalidad si se reproducen muchos sonidos.
-    // _backgroundMusicPlayer.setVolume(0.2); 
+    // _backgroundMusicPlayer.setVolume(0.2);
     _sfxPlayer.play(AssetSource(soundAsset));
     // _sfxPlayer.onPlayerComplete.first.then((_) {
     //   _backgroundMusicPlayer.setVolume(1.0);
@@ -291,8 +311,9 @@ class _GameScreenState extends State<GameScreen>
       _fishes.clear();
     });
 
-    _lloronaVideoController =
-        VideoPlayerController.asset('assets/videos/scream_llorona.mp4');
+    _lloronaVideoController = VideoPlayerController.asset(
+      'assets/videos/scream_llorona.mp4',
+    );
 
     void listener() {
       if (_lloronaVideoController.value.isInitialized &&
@@ -312,16 +333,67 @@ class _GameScreenState extends State<GameScreen>
 
     _lloronaVideoController.addListener(listener);
 
-    _lloronaVideoController.initialize().then((_) {
-      setState(() {
-        _isLloronaScreaming = true;
-      });
-      _lloronaVideoController.play();
-      _sfxPlayer.play(AssetSource('audio/sfx/llorona.mp3'));
-    }).catchError((error) {
-      debugPrint("Error loading Llorona video: $error");
-      _backgroundMusicPlayer.resume();
-      _gameLoop.repeat();
+    _lloronaVideoController
+        .initialize()
+        .then((_) {
+          setState(() {
+            _isLloronaScreaming = true;
+          });
+          _lloronaVideoController.play();
+          _sfxPlayer.play(AssetSource('audio/sfx/llorona.mp3'));
+        })
+        .catchError((error) {
+          debugPrint("Error loading Llorona video: $error");
+          _backgroundMusicPlayer.resume();
+          _gameLoop.repeat();
+        });
+  }
+
+  void _handleBombExplosion(Fish bombFish) async {
+    const explosionRadius = 150.0;
+
+    // Play bomb sound from second 4 to second 6 (2 seconds duration)
+    final bombPlayer = AudioPlayer();
+    await bombPlayer.play(
+      AssetSource('audio/sfx/bomba.mp3'),
+      position: const Duration(seconds: 4),
+    );
+
+    // Stop after 2 seconds (from second 4 to second 6)
+    Timer(const Duration(seconds: 2), () {
+      bombPlayer.stop();
+      bombPlayer.dispose();
+    });
+
+    setState(() {
+      // Remove the bomb fish
+      _fishes.remove(bombFish);
+
+      // Find and remove all fish within explosion radius
+      final fishToRemove = <Fish>[];
+      for (var fish in _fishes) {
+        final distance = sqrt(
+          pow(fish.position.dx - bombFish.position.dx, 2) +
+              pow(fish.position.dy - bombFish.position.dy, 2),
+        );
+
+        if (distance <= explosionRadius) {
+          fishToRemove.add(fish);
+          // Subtract points for destroyed fish (don't give points)
+          if (fish.type == FishType.normal ||
+              fish.type == FishType.especial_bueno) {
+            _currentScore -= fish.points;
+          }
+        }
+      }
+
+      // Remove all fish caught in explosion
+      for (var fish in fishToRemove) {
+        _fishes.remove(fish);
+      }
+
+      // Apply bomb penalty
+      _currentScore += bombFish.points; // -15 points
     });
   }
 
@@ -334,13 +406,16 @@ class _GameScreenState extends State<GameScreen>
         if (fish.type == FishType.danger) {
           fish.type = FishType.especial_bueno;
           fish.points = 5;
-          fish.imageName = _random.nextBool() ? 'cabello_special' : 'mariachi_special';
+          fish.imageName = _random.nextBool()
+              ? 'cabello_special'
+              : 'mariachi_special';
         }
       }
     });
 
-    _axolotlVideoController =
-        VideoPlayerController.asset('assets/videos/axo_anima.mp4');
+    _axolotlVideoController = VideoPlayerController.asset(
+      'assets/videos/axo_anima.mp4',
+    );
 
     void listener() {
       if (_axolotlVideoController.value.isInitialized &&
@@ -360,29 +435,38 @@ class _GameScreenState extends State<GameScreen>
 
     _axolotlVideoController.addListener(listener);
 
-    _axolotlVideoController.initialize().then((_) {
-      setState(() {
-        _isAxolotlAnimating = true;
-      });
-      _axolotlVideoController.play();
-    }).catchError((error) {
-      debugPrint("Error loading Axolotl video: $error");
-      _backgroundMusicPlayer.resume();
-      _gameLoop.repeat();
-    });
+    _axolotlVideoController
+        .initialize()
+        .then((_) {
+          setState(() {
+            _isAxolotlAnimating = true;
+          });
+          _axolotlVideoController.play();
+        })
+        .catchError((error) {
+          debugPrint("Error loading Axolotl video: $error");
+          _backgroundMusicPlayer.resume();
+          _gameLoop.repeat();
+        });
   }
 
   void _onFishTapped(Fish fish) {
     // Handle special fish effects first
     switch (fish.imageName) {
       case 'axolott_special':
-        _handleAxolotlEffect();
+        // 20% probability (2 out of 10) to trigger animation
+        if (Random().nextInt(10) < 2) {
+          _handleAxolotlEffect();
+        }
         break;
       case 'snake_danger':
         _playSoundEffect('audio/sfx/snake.mp3');
         break;
       case 'llorona_danger':
-        _handleLloronaEffect();
+        // 20% probability (2 out of 10) to trigger animation
+        if (Random().nextInt(10) < 2) {
+          _handleLloronaEffect();
+        }
         break;
       case 'diablo_danger':
         _playSoundEffect('audio/sfx/diablo.mp3');
@@ -390,13 +474,20 @@ class _GameScreenState extends State<GameScreen>
       case 'cabello_special':
         _playSoundEffect('audio/sfx/cabello.mp3');
         break;
+      case 'bomb_fish':
+        _handleBombExplosion(fish);
+        break;
     }
 
-    // Don't process tap for Llorona or Axolotl video effects
-    if (fish.imageName == 'llorona_danger' || fish.imageName == 'axolott_special') {
-      setState(() {
-        _fishes.remove(fish);
-      });
+    // Don't process tap for Llorona, Axolotl or Bomb (already handled above)
+    if (fish.imageName == 'llorona_danger' ||
+        fish.imageName == 'axolott_special' ||
+        fish.imageName == 'bomb_fish') {
+      if (fish.imageName != 'bomb_fish') {
+        setState(() {
+          _fishes.remove(fish);
+        });
+      }
       return;
     }
 
@@ -411,7 +502,8 @@ class _GameScreenState extends State<GameScreen>
       if (abilityCode == 'EXTRA_POINT_CHANCE' && _random.nextDouble() < 0.25) {
         pointsToAdd += 1;
       }
-      if (abilityCode == 'DOUBLE_POINTS_CHANCE' && _random.nextDouble() < 0.15) {
+      if (abilityCode == 'DOUBLE_POINTS_CHANCE' &&
+          _random.nextDouble() < 0.15) {
         pointsToAdd *= 2;
       }
     }
@@ -459,8 +551,9 @@ class _GameScreenState extends State<GameScreen>
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
-                Navigator.of(context)
-                    .pop(_currentScore); // Go back with a win result
+                Navigator.of(
+                  context,
+                ).pop(_currentScore); // Go back with a win result
               },
             ),
           ],
@@ -531,15 +624,18 @@ class _GameScreenState extends State<GameScreen>
           ),
 
           // Fish Widgets
-          ..._fishes
-              .map((fish) => FishWidget(
-                    key: ValueKey(fish.id),
-                    fish: fish,
-                    onTapped: _onFishTapped,
-                  )),
+          ..._fishes.map(
+            (fish) => FishWidget(
+              key: ValueKey(fish.id),
+              fish: fish,
+              onTapped: _onFishTapped,
+            ),
+          ),
 
           // Explosion Widgets
-          ..._explosions.map((explosion) => ExplosionWidget(explosion: explosion)),
+          ..._explosions.map(
+            (explosion) => ExplosionWidget(explosion: explosion),
+          ),
 
           // UI on top
           SafeArea(

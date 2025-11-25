@@ -48,4 +48,13 @@ app.*.map.json
 /assets/audio/
 /assets/images/
 /assets/fonts/
+
+# Large files
+*.zip
+*.rar
+*.7z
+
+# macOS files
+__MACOSX/
+.DS_Store
 /assets/videos/

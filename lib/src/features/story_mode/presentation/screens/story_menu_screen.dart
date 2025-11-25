@@ -97,7 +97,12 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.store, color: Colors.white),
+                      icon: Image.asset(
+                        'assets/images/madera/Tienda.png',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.contain,
+                      ),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -119,10 +124,14 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                         return const Center(child: CircularProgressIndicator());
                       } else if (snapshot.hasError) {
                         return Center(
-                            child: Text('Error: ${snapshot.error}',
-                                style: const TextStyle(color: Colors.white)));
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        );
                       } else {
                         final unlockedLevel = snapshot.data ?? 1;
+                        debugPrint('🔓 Unlocked level from DB: $unlockedLevel');
                         return Center(
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
@@ -130,6 +139,9 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                               children: List.generate(3, (index) {
                                 final level = index + 1;
                                 final isLocked = level > unlockedLevel;
+                                debugPrint(
+                                  '🎮 Level $level - isLocked: $isLocked (unlockedLevel: $unlockedLevel)',
+                                );
                                 return LevelCard(
                                   level: level,
                                   isLocked: isLocked,
@@ -137,15 +149,17 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                                       ? null
                                       : () async {
                                           widget.audioPlayer.pause();
-                                          final result = await Navigator.of(
-                                                  context)
-                                              .push(
-                                            MaterialPageRoute(
-                                              builder: (context) => GameScreen(
-                                                  level: level,
-                                                  equippedRod: _equippedRod),
-                                            ),
-                                          );
+                                          final result =
+                                              await Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      GameScreen(
+                                                        level: level,
+                                                        equippedRod:
+                                                            _equippedRod,
+                                                      ),
+                                                ),
+                                              );
                                           widget.audioPlayer.resume();
                                           setState(() {
                                             _equippedRod = null;
@@ -153,18 +167,23 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                                                 _userId != null) {
                                               try {
                                                 _storyRepository
-                                                    .completeLevel(_userId!,
-                                                        level, result)
+                                                    .completeLevel(
+                                                      _userId!,
+                                                      level,
+                                                      result,
+                                                    )
                                                     .then((_) {
-                                                  _loadUnlockedLevel();
-                                                });
+                                                      _loadUnlockedLevel();
+                                                    });
                                               } catch (e) {
                                                 if (mounted) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
                                                     SnackBar(
                                                       content: Text(
-                                                          'Error al completar el nivel: $e'),
+                                                        'Error al completar el nivel: $e',
+                                                      ),
                                                     ),
                                                   );
                                                 }
@@ -204,6 +223,7 @@ class LevelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🎨 Building LevelCard - Level: $level, isLocked: $isLocked');
     // The image path is constructed dynamically based on the level.
     // e.g., assets/images/ui/boton_nivel1.png for level 1.
     final imagePath = (level == 2 || level == 3)
@@ -243,30 +263,63 @@ class LevelCard extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               // Display the level number with a shadow for better readability
-              Text(
-                '$level',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 10.0,
-                      color: Colors.black.withOpacity(0.5),
-                      offset: const Offset(2.0, 2.0),
-                    ),
-                  ],
+              if (!isLocked)
+                Text(
+                  '$level',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 10.0,
+                        color: Colors.black.withOpacity(0.5),
+                        offset: const Offset(2.0, 2.0),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              // If the level is locked, show a lock icon with a dark overlay
+              // If the level is locked, show the seaweed (algas) image overlay
               if (isLocked)
-                Container(
-                  color: Colors.black.withOpacity(0.6),
-                  child: const Center(
-                    child: Icon(
-                      Icons.lock,
-                      color: Colors.white,
-                      size: 60,
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/AlgasBloqueo.png'),
+                        fit: BoxFit.fill,
+                      ),
+                    ),
+                    child: Container(
+                      color: Colors.black.withOpacity(0.1),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.lock,
+                              color: Colors.white,
+                              size: 50,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Nivel $level',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 5.0,
+                                    color: Colors.black,
+                                    offset: Offset(1.0, 1.0),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
