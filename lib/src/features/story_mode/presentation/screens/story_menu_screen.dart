@@ -20,7 +20,7 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
   late final StoryRepository _storyRepository;
   late Future<int> _unlockedLevelFuture;
   ShopItem? _equippedRod;
-  int? get _userId => AuthRepository.currentUser?['id'];
+  String? get _userId => AuthRepository.currentUser?['id']?.toString();
 
   @override
   void initState() {

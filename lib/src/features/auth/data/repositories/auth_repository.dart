@@ -7,7 +7,19 @@ class AuthRepository {
   static final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   static Map<String, dynamic>? _currentUser;
 
-  static Map<String, dynamic>? get currentUser => _currentUser;
+  static Map<String, dynamic>? get currentUser {
+    if (_currentUser != null) return _currentUser;
+    
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser != null) {
+      return {
+        'id': firebaseUser.uid,
+        'username': firebaseUser.displayName ?? firebaseUser.email ?? 'Player',
+        'email': firebaseUser.email,
+      };
+    }
+    return null;
+  }
 
   static Future<UserCredential> signInWithGoogle() async {
     // Trigger the authentication flow

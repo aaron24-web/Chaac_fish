@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:pesca_game/src/features/auth/data/repositories/auth_repository.dart';
+import 'package:pesca_game/src/features/multiplayer/data/repositories/multiplayer_repository.dart';
+import 'package:pesca_game/src/features/multiplayer/presentation/screens/multiplayer_game_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
 class MultiplayerMenuScreen extends StatefulWidget {
@@ -10,14 +14,14 @@ class MultiplayerMenuScreen extends StatefulWidget {
 
 class _MultiplayerMenuScreenState extends State<MultiplayerMenuScreen> {
   late VideoPlayerController _videoController;
-  String? player1Selection;
-  String? player2Selection;
-
-  bool get isPlayer1Turn => player1Selection == null;
+  late final MultiplayerRepository _multiplayerRepository;
+  bool _isLoading = false;
+  final TextEditingController _sessionIdController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _multiplayerRepository = MultiplayerRepository(Supabase.instance.client);
     _videoController =
         VideoPlayerController.asset('assets/videos/multi_fondo.mp4')
           ..initialize().then((_) {
@@ -31,31 +35,92 @@ class _MultiplayerMenuScreenState extends State<MultiplayerMenuScreen> {
   @override
   void dispose() {
     _videoController.dispose();
+    _sessionIdController.dispose();
     super.dispose();
   }
 
-  void _selectCharacter(String character) {
-    setState(() {
-      if (isPlayer1Turn) {
-        player1Selection = character;
-      } else {
-        if (player2Selection == null && character != player1Selection) {
-          player2Selection = character;
-        }
+  Future<void> _createGame() async {
+    setState(() => _isLoading = true);
+    try {
+      final userId = AuthRepository.currentUser?['id'];
+      if (userId == null) {
+        throw Exception('Usuario no autenticado');
       }
-    });
+
+      final sessionId = await _multiplayerRepository.createSession(userId);
+      
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => MultiplayerGameScreen(
+              sessionId: sessionId,
+              isHost: true,
+              playerId: userId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error creating game: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al crear partida: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _joinGame() async {
+    final sessionId = _sessionIdController.text.trim();
+    if (sessionId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa un ID de partida')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final userId = AuthRepository.currentUser?['id'];
+      if (userId == null) {
+        throw Exception('Usuario no autenticado');
+      }
+
+      await _multiplayerRepository.joinSession(sessionId, userId);
+
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => MultiplayerGameScreen(
+              sessionId: sessionId,
+              isHost: false,
+              playerId: userId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al unirse a partida: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Selección de Personaje'),
+        title: const Text('Multijugador'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
           if (_videoController.value.isInitialized)
@@ -69,80 +134,87 @@ class _MultiplayerMenuScreenState extends State<MultiplayerMenuScreen> {
                 ),
               ),
             ),
-          // Player 1 selection area
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-            top: 50,
-            left: player1Selection != null ? 20 : size.width / 2 - 75,
-            child: player1Selection != null
-                ? CharacterCard(character: player1Selection!)
-                : Container(),
-          ),
-
-          // Player 2 selection area
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-            top: 50,
-            right: player2Selection != null ? 20 : size.width / 2 - 75,
-            child: player2Selection != null
-                ? CharacterCard(character: player2Selection!)
-                : Container(),
-          ),
-
-          // Character choices
-          if (player1Selection == null || player2Selection == null)
-            Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  if (player1Selection != 'chaac' && player2Selection != 'chaac')
-                    GestureDetector(
-                      onTap: () => _selectCharacter('chaac'),
-                      child: const CharacterCard(character: 'chaac'),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
+              ),
+              width: 400,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Sala de Espera',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  if (player1Selection != 'pos' && player2Selection != 'pos')
-                    GestureDetector(
-                      onTap: () => _selectCharacter('pos'),
-                      child: const CharacterCard(character: 'pos'),
-                    ),
-                ],
+                    const SizedBox(height: 40),
+                    if (_isLoading)
+                      const CircularProgressIndicator()
+                    else ...[
+                      ElevatedButton(
+                        onPressed: _createGame,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 20,
+                          ),
+                          backgroundColor: Colors.blue,
+                        ),
+                        child: const Text(
+                          'Crear Partida',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      const Text(
+                        'O unirse a una existente:',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _sessionIdController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'ID de la partida',
+                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.1),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _joinGame,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 20,
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                        child: const Text(
+                          'Unirse',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
-
-          // Player turn indicator
-          if (player1Selection == null || player2Selection == null)
-            Positioned(
-              top: 20,
-              left: 0,
-              right: 0,
-              child: Text(
-                isPlayer1Turn ? 'Jugador 1 Elige' : 'Jugador 2 Elige',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-            ),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class CharacterCard extends StatelessWidget {
-  final String character;
-
-  const CharacterCard({super.key, required this.character});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 150,
-      height: 150,
-      child: Image.asset('assets/images/ui/${character}_battle.gif'),
     );
   }
 }

@@ -27,4 +27,32 @@ class Fish {
 
   // Method to get the full image path
   String get imagePath => 'assets/images/fish/$imageName.png';
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'imageName': imageName,
+      'points': points,
+      'type': type.index,
+      'x': position.dx,
+      'y': position.dy,
+      'speed': speed,
+      'originalSpeed': originalSpeed,
+      'goesRight': goesRight,
+      'isStunned': isStunned,
+    };
+  }
+
+  factory Fish.fromJson(Map<String, dynamic> json) {
+    return Fish(
+      id: json['id'],
+      imageName: json['imageName'],
+      points: json['points'],
+      type: FishType.values[json['type']],
+      position: Offset(json['x'].toDouble(), json['y'].toDouble()),
+      speed: json['speed'].toDouble(),
+      goesRight: json['goesRight'],
+      isStunned: json['isStunned'] ?? false,
+    );
+  }
 }

@@ -6,7 +6,7 @@ class StoryRepository {
 
   StoryRepository(this._supabaseClient);
 
-  Future<int> getUnlockedLevel(int userId) async {
+  Future<int> getUnlockedLevel(String userId) async {
     try {
       final response = await _supabaseClient
           .from('users')
@@ -21,7 +21,7 @@ class StoryRepository {
     }
   }
 
-  Future<void> completeLevel(int userId, int level, int score) async {
+  Future<void> completeLevel(String userId, int level, int score) async {
     try {
       await _supabaseClient.rpc(
         'complete_level',
