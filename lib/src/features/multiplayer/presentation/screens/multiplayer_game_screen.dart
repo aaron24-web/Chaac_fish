@@ -149,11 +149,13 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
             }
           }
           
-          // Sync Fish (Initial Load / Rejoin)
+          // Sync Fish (Initial Load / Rejoin / Updates)
           if (gameState['activeFish'] != null) {
             final List activeFishData = gameState['activeFish'];
+            final Set<String> activeIds = activeFishData.map((f) => f['id'] as String).toSet();
             final Set<String> currentIds = _fishes.map((f) => f.id).toSet();
             
+            // 1. Add missing fish
             for (var fishData in activeFishData) {
               final String fishId = fishData['id'];
               // Only add if not present AND not recently caught locally
@@ -166,6 +168,21 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
                     _fishes.add(Fish.fromJson(fishData));
                   });
                 }
+              }
+            }
+
+            // 2. Remove extra fish (Guest Only)
+            // If a fish is in our local list but NOT in the DB list, it means it was removed (caught/swam away)
+            // and we missed the event. We must remove it to stay in sync.
+            if (!widget.isHost) {
+              final List<Fish> toRemove = _fishes.where((f) => !activeIds.contains(f.id)).toList();
+              if (toRemove.isNotEmpty) {
+                setState(() {
+                  for (var f in toRemove) {
+                    debugPrint('🧹 Sync: Removing stale fish ${f.id}');
+                    _fishes.remove(f);
+                  }
+                });
               }
             }
           }
@@ -198,28 +215,98 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
       final payload = event['payload'];
 
       if (type == 'spawn_fish' && !widget.isHost) {
-        // ... (spawn logic)
+        // Guest receives spawn event
+        setState(() {
+          _fishes.add(Fish.fromJson(payload));
+        });
+      } else if (type == 'attempt_catch') {
+        // Host receives catch attempt from Guest
+        if (widget.isHost) {
+          final fishId = payload['fishId'];
+          final guestId = payload['playerId'];
+          
+          debugPrint('📨 Host received attempt_catch: $fishId from $guestId');
+          
+          // Check if fish is still valid (in _fishes)
+          final fishIndex = _fishes.indexWhere((f) => f.id == fishId);
+          
+          if (fishIndex != -1) {
+            // Valid catch!
+            final fish = _fishes[fishIndex];
+            
+            // 1. Remove locally
+            setState(() {
+              _fishes.removeAt(fishIndex);
+              _opponentScore += fish.points; // Guest caught it
+            });
+            
+            // 2. Broadcast success
+            _multiplayerRepository.broadcastGameEvent(widget.sessionId, {
+              'type': 'fish_caught',
+              'payload': {
+                'fishId': fishId,
+                'playerId': guestId,
+              },
+            });
+            
+            // 3. Update DB
+             _multiplayerRepository.updateScore(
+              widget.sessionId,
+              guestId,
+              _opponentScore, 
+              false,
+            );
+            _updateActiveFishInDB();
+            
+          } else {
+            // Invalid catch (already gone)
+            debugPrint('🚫 Rejecting catch for $fishId from $guestId');
+            _multiplayerRepository.broadcastGameEvent(widget.sessionId, {
+              'type': 'catch_rejected',
+              'payload': {
+                'fishId': fishId,
+                'playerId': guestId,
+              },
+            });
+          }
+        }
+      } else if (type == 'catch_rejected') {
+        // Guest receives rejection
+        final targetPlayerId = payload['playerId'];
+        if (targetPlayerId == widget.playerId) {
+           debugPrint('❌ Catch Rejected! Rolling back score.');
+           setState(() {
+             _myScore -= 1; // Rollback
+             ScaffoldMessenger.of(context).showSnackBar(
+               const SnackBar(content: Text('¡Demasiado lento!'), duration: Duration(milliseconds: 500)),
+             );
+           });
+        }
       } else if (type == 'fish_caught') {
         // Both receive fish caught
         final fishId = payload['fishId'];
         final playerId = payload['playerId'];
         
-        debugPrint('🎣 Fish Caught: $fishId by $playerId');
+        debugPrint('🎣 Fish Caught Event received: $fishId by $playerId');
 
         setState(() {
-          _fishes.removeWhere((f) => f.id == fishId);
+          final fishIndex = _fishes.indexWhere((f) => f.id == fishId);
+          if (fishIndex != -1) {
+             _fishes.removeAt(fishIndex);
+             debugPrint('🗑️ Removed fish $fishId from local list via event');
+          } else {
+             debugPrint('⚠️ Fish $fishId not found in local list (might be already gone)');
+          }
           _caughtFishIds.add(fishId); // Mark as caught
           
           // Optimistic Score Update (Real-time fix)
           if (playerId == widget.playerId) {
-             // Already updated locally in _onFishTapped
+             // Already updated locally in _onFishTapped (Optimistic)
           } else {
              // Update opponent score locally immediately
              _opponentScore += 1; 
           }
         });
-        
-        // ... (host sync logic)
       }
     });
   }
@@ -377,36 +464,84 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
   void _onFishTapped(Fish fish) {
     if (_isWaitingForOpponent || _isGameOver) return;
 
-    // Optimistic update
+    // Optimistic update (for both Host and Guest)
     setState(() {
       _fishes.remove(fish);
       _caughtFishIds.add(fish.id); // Mark as caught
       _myScore += fish.points;
     });
 
-    // Broadcast catch event
-    _multiplayerRepository.broadcastGameEvent(widget.sessionId, {
-      'type': 'fish_caught',
-      'payload': {
-        'fishId': fish.id,
-        'playerId': widget.playerId,
-      },
-    });
-
-    // Update score in DB
-    _multiplayerRepository.updateScore(
-      widget.sessionId,
-      widget.playerId,
-      _myScore,
-      widget.isHost,
-    );
-    
-    // If host, update active fish in DB
     if (widget.isHost) {
-      _updateActiveFishInDB();
+      // Host is authority: Broadcast catch immediately
+      _multiplayerRepository.broadcastGameEvent(widget.sessionId, {
+        'type': 'fish_caught',
+        'payload': {
+          'fishId': fish.id,
+          'playerId': widget.playerId,
+        },
+      });
+      
+      // Update DB Atomically (Score + Active Fish)
+      _updateSessionState(widget.playerId, _myScore);
+      
+    } else {
+      // Guest: Send attempt_catch to Host
+      _multiplayerRepository.broadcastGameEvent(widget.sessionId, {
+        'type': 'attempt_catch',
+        'payload': {
+          'fishId': fish.id,
+          'playerId': widget.playerId,
+        },
+      });
+      
+      // Also update own score in DB (Host will update activeFish, but we update score)
+      // Actually, Guest should NOT update activeFish, only Host does.
+      // But Guest CAN update their own score.
+       _multiplayerRepository.updateScore(
+        widget.sessionId,
+        widget.playerId,
+        _myScore,
+        widget.isHost,
+      );
     }
   }
   
+  Future<void> _updateSessionState(String playerId, int score) async {
+    // 1. Get current active fish
+    final activeFishList = _fishes.map((f) => f.toJson()).toList();
+    
+    // 2. We need the current players list to update the score. 
+    // Since we don't have the full players list locally in a variable (only scores),
+    // we might need to fetch it or assume structure. 
+    // BETTER APPROACH: Use the existing updateScore logic but combined.
+    // However, updateScore reads first.
+    
+    // Let's rely on the fact that we are the Host.
+    // We can just call the new repo method if we pass the players list.
+    // But we don't have the players list handy without reading.
+    
+    // Compromise: We will read-modify-write in the Repo using the new method.
+    // But wait, the repo method expects the list.
+    
+    // Let's fetch the room first here, or let the repo handle it.
+    // Actually, let's modify the repo method to handle the read-modify-write if needed.
+    // OR, simpler:
+    // Just call _multiplayerRepository.updateSessionState with the data we have.
+    
+    // Since we can't easily get the full players list without a read, 
+    // let's stick to the previous plan but make sure we update activeFish IMMEDIATELY.
+    
+    // Actually, the best way is to update activeFish AND score in one go.
+    // Let's use a new method in Repo that takes (playerId, score, activeFish) and does the logic.
+    
+    await _multiplayerRepository.updateSessionScoreAndFish(
+      widget.sessionId,
+      playerId,
+      score,
+      activeFishList,
+    );
+  }
+
   void _updateActiveFishInDB() {
     final activeFishList = _fishes.map((f) => f.toJson()).toList();
     _multiplayerRepository.updateGameState(widget.sessionId, {

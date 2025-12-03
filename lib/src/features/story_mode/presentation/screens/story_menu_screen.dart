@@ -39,11 +39,13 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
 
   void _loadUnlockedLevel() {
     if (_userId != null) {
+      debugPrint('👤 StoryMenuScreen: Loading levels for User ID: $_userId');
       setState(() {
         _unlockedLevelFuture = _storyRepository.getUnlockedLevel(_userId!);
       });
     } else {
       // Handle the case where the user is not logged in
+      debugPrint('⚠️ StoryMenuScreen: User is NULL. Progress will not be saved.');
       setState(() {
         _unlockedLevelFuture = Future.value(1);
       });
@@ -176,17 +178,29 @@ class _StoryMenuScreenState extends State<StoryMenuScreen> {
                                                       _loadUnlockedLevel();
                                                     });
                                               } catch (e) {
-                                                if (mounted) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        'Error al completar el nivel: $e',
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          'Error: ${e.toString()}',
+                                                        ),
+                                                        backgroundColor: Colors.red,
+                                                        duration: const Duration(seconds: 5),
                                                       ),
-                                                    ),
-                                                  );
-                                                }
+                                                    );
+                                                  }
+                                              }
+                                            } else if (_userId == null) {
+                                              debugPrint('⚠️ Cannot save progress: User is NULL');
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('No estás logueado. El progreso no se guardará.'),
+                                                    backgroundColor: Colors.orange,
+                                                  ),
+                                                );
                                               }
                                             }
                                           });

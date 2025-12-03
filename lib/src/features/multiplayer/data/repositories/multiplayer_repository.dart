@@ -128,4 +128,37 @@ class MultiplayerRepository {
       'game_state': currentGameState,
     }).eq('id', sessionId);
   }
+  // Atomic update for score and game state
+  Future<void> updateSessionState(String sessionId, List players, Map<String, dynamic> gameState) async {
+    await _supabase.from('game_rooms').update({
+      'players': players,
+      'game_state': gameState,
+    }).eq('id', sessionId);
+  }
+  // Atomic update for score and game state (activeFish)
+  Future<void> updateSessionScoreAndFish(String sessionId, String playerId, int score, List activeFish) async {
+    final room = await _supabase
+        .from('game_rooms')
+        .select('players, game_state')
+        .eq('id', sessionId)
+        .single();
+    
+    final List players = List.from(room['players'] ?? []);
+    final Map<String, dynamic> gameState = Map.from(room['game_state'] ?? {});
+    
+    // Update Score
+    for (var p in players) {
+      if (p['id'] == playerId) {
+        p['score'] = score;
+      }
+    }
+    
+    // Update Active Fish
+    gameState['activeFish'] = activeFish;
+
+    await _supabase.from('game_rooms').update({
+      'players': players,
+      'game_state': gameState,
+    }).eq('id', sessionId);
+  }
 }

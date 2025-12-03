@@ -22,6 +22,7 @@ class StoryRepository {
   }
 
   Future<void> completeLevel(String userId, int level, int score) async {
+    debugPrint('🚀 StoryRepository: Attempting to complete level $level for user $userId with score $score');
     try {
       await _supabaseClient.rpc(
         'complete_level',
@@ -31,9 +32,10 @@ class StoryRepository {
           'score_param': score,
         },
       );
+      debugPrint('✅ StoryRepository: Level completion RPC successful');
     } catch (e) {
       // Handle errors, e.g., network issues or function not found
-      debugPrint('Error completing level: $e');
+      debugPrint('❌ StoryRepository: Error completing level: $e');
       rethrow;
     }
   }
