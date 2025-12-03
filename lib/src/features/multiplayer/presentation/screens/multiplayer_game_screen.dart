@@ -236,7 +236,7 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
             
             // 1. Remove locally
             setState(() {
-              _fishes.removeAt(fishIndex);
+              // _fishes.removeAt(fishIndex);
               _opponentScore += fish.points; // Guest caught it
             });
             
@@ -256,7 +256,7 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
               _opponentScore, 
               false,
             );
-            _updateActiveFishInDB();
+            // _updateActiveFishInDB();
             
           } else {
             // Invalid catch (already gone)
@@ -292,7 +292,7 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
         setState(() {
           final fishIndex = _fishes.indexWhere((f) => f.id == fishId);
           if (fishIndex != -1) {
-             _fishes.removeAt(fishIndex);
+             // _fishes.removeAt(fishIndex);
              debugPrint('🗑️ Removed fish $fishId from local list via event');
           } else {
              debugPrint('⚠️ Fish $fishId not found in local list (might be already gone)');
@@ -482,7 +482,7 @@ class _MultiplayerGameScreenState extends State<MultiplayerGameScreen>
       });
       
       // Update DB Atomically (Score + Active Fish)
-      _updateSessionState(widget.playerId, _myScore);
+      // _updateSessionState(widget.playerId, _myScore);
       
     } else {
       // Guest: Send attempt_catch to Host
